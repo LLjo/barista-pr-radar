@@ -8,9 +8,10 @@ open GitHub notifications to find out what is waiting on you.
 It is an **external** plugin: it lives only in `LLjo/barista-pr-radar` and installs through
 Barista's Plugins page, "Install from repo". **Barista's own code does not change.**
 
-> **Chosen layout: _pending the human's pick_** (see "Layout" below). Mockups:
-> `design/mockup-a.html` (compact list), `design/mockup-b.html` (two columns),
-> `design/mockup-c.html` (grouped by repo); `design/index.html` shows all three.
+> **Chosen layout: B grouped by repo like C**, the human's pick on 2026-10-21. The build
+> target is **`design/mockup-final.html`**. It keeps B's two columns and toolbar settings,
+> and groups each column's rows under repo headers the way C does. `mockup-a/b/c.html`
+> stay as the record of the alternatives, and `design/index.html` shows them side by side.
 
 ## How to work
 
@@ -211,13 +212,42 @@ project: GitHub identity is per host.
 | POST | `/refresh` | polls now, returns `Snapshot` |
 | GET | `/count` | `{count}` = `reviewRequested.length`: the number the badge shows |
 
-## Layout
+## Layout: build `design/mockup-final.html`
 
-**Pending the human's pick.** This section will name the chosen mockup and any changes. The
-build copies that mockup's structure, spacing and chip vocabulary. The rail in the mockups
-stands in for Barista's shell; the plugin does not draw it.
+Copy its structure, spacing and chip vocabulary. Its rail and `light / dark` toggle are
+mockup-only: the plugin draws neither, because Barista's shell owns the rail.
 
-Common to every layout:
+- **Toolbar (one line, wraps on narrow):** the "PR Radar" title, then the settings controls:
+  - **Orgs** as removable chips plus `+ add`. That opens a small inline input; Enter saves.
+  - **Repos** as one text input, a comma list saved on blur or Enter.
+  - **Every** as a 1 / 5 / 15 min select.
+  - On the right: the review-requested **count chip** ("5 to review", need colours), "synced
+    1 min ago" and a ↻ button that calls `POST /refresh`.
+  - Every settings change is a `PUT /settings`. There is no Save button and no separate
+    settings page.
+- **Two columns** (`grid-template-columns: 1fr 1fr`), stacking to one column below 860 px:
+  - **To review** has the count badge in caramel and a segmented **All / Me / Teams** filter.
+    Me shows `via.kind === "you"` only and Teams shows `"team"` only.
+  - **Mine** has a neutral count badge and a segmented **Open / Drafts** filter. Open shows
+    `!draft` and Drafts shows `draft`.
+  - Filters are client-side over the snapshot and remembered in `localStorage`, under the
+    key `pr-radar:filters`.
+- **Repo groups inside each column:** a small mono header `owner/` + **name**, then that
+  repo's rows. The repo is in the header, so a row's second line starts with `#number`.
+  - In **To review**, groups are ordered by their longest-waiting PR (oldest `createdAt`
+    first), and rows within a group the same way.
+  - In **Mine**, groups are ordered by most recent `updatedAt`, and rows likewise.
+  - A group with no rows after filtering is hidden.
+- **Row (two lines):**
+  - Line 1 is the title, which links to the PR and ellipsizes.
+  - Line 2 in To review: `#n`, `author · age`, and the via ("you" in caramel, or
+    `@org/team` in faint ink). The PR / Files / Checks links sit on the right.
+  - Line 2 in Mine: `#n`, `age`, and the PR / Files / Checks links. The right side stacks
+    the review and conflict chips above the CI summary.
+- **Count:** the toolbar chip and the To review badge both show `snapshot.reviewRequested.length`,
+  the same number `GET /count` returns.
+
+Also:
 
 - **Chips**: `✓ approved` (work colours), `± changes requested` (fail), `◷ review a/n` (need),
   and `draft` (steel outline). CI shows as `● CI p/t` when passing, `✕ CI n failing` when
@@ -233,17 +263,15 @@ Common to every layout:
   configured, a hint says "All orgs. Add one in settings to narrow it."
 - The auth error is a single banner line above the lists, not a modal.
 
-## Sidebar count: what is possible without core changes
+## Count: the plugin header, not the rail
 
 Barista core has **no** hook for a plugin to badge its rail or pinned entry. The shell builds
 those entries in `packages/web/src/lib/flow/pages.ts` and `StarStrip.svelte`. They take
 `title` from the manifest and an icon from a hard-coded map (`stars.ts::ICON_OF`), and no
-postMessage type or NATS subject carries a count. The epic forbids core changes, so:
+postMessage type or NATS subject carries a count. The human approved this approach:
 
-- The plugin serves `GET /api/pr-radar/count`, and shows the same count in its own header.
-- A real rail badge is a **separate Barista core issue**. A generic version would be a
-  manifest `badge: "/count"` that the shell polls, or a `barista:badge` postMessage. PR
-  Radar's `/count` route is ready for it.
+- The plugin serves `GET /api/pr-radar/count`, and shows the count in its own toolbar chip
+  and on the To review badge.
 - The manifest `icon` is ignored by the shell today, which shows the generic page icon. Set
   `"pr"` anyway, so a future shell can use it.
 
@@ -251,7 +279,10 @@ postMessage type or NATS subject carries a count. The epic forbids core changes,
 
 - Writing to GitHub: approving, commenting, merging, re-requesting.
 - Notifications other than PRs: issues, discussions, mentions.
-- Any change to Barista core, including the rail badge (see above).
+- Any change to Barista core.
+- **A real rail or pinned badge for the count.** This is a separate Barista core follow-up,
+  which the epic lead files. A generic version would be a manifest `badge: "/count"` that
+  the shell polls, or a `barista:badge` postMessage. This plugin's `GET /count` is ready for it.
 - Closed or merged PRs, PRs you only commented on, GitHub Enterprise hosts.
 - Per-project settings, multiple GitHub accounts, a token field in the UI.
 - Pagination past 50 per list. The header shows `totals` when there are more.
@@ -271,7 +302,8 @@ postMessage type or NATS subject carries a count. The epic forbids core changes,
    refresh interval is honoured.
 6. With no GitHub auth, the page shows the one-line banner and the server does not crash.
 7. `GET /api/pr-radar/count` matches the review list length.
-8. The layout matches the chosen mockup: slim, with no element the mockup lacks.
+8. The page matches `design/mockup-final.html` with no element the mockup lacks: two
+   columns, repo groups, filters (All/Me/Teams, Open/Drafts) and the toolbar settings.
 9. `bun test` passes in the plugin, with tests for `query.ts` (scope qualifiers, repo
    expansion, the 256-character cap) and `map.ts` (each review, CI and conflict case, and
    you versus team). `tsc -p server/tsconfig.json` is clean, and `cd ui && bun run build`

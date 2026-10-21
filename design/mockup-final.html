@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PR Radar — final · B columns, grouped by repo (C)</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+	/* The pick (#1238): B's two columns + toolbar settings, rows grouped under repo headers as in C.
+	   Inside a group the repo is in the header, so a row's second line drops it. */
+	.page { padding: 14px 18px 30px; }
+	.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-size: var(--t-s); color: var(--ink-2); }
+	.bar h1 { margin: 0 6px 0 0; font: 600 var(--t-l) var(--display); color: var(--ink); }
+	.bar label { display: inline-flex; align-items: center; gap: 6px; }
+	.bar .org { padding: 1px 8px; border-radius: var(--r-pill); background: var(--sel); color: var(--ink); }
+	.bar .org b { font-weight: 400; color: var(--ink-3); margin-left: 2px; }
+	.bar input { width: 150px; }
+	.bar .add { color: var(--ink-3); cursor: pointer; }
+	.bar .sync { margin-left: auto; color: var(--ink-3); }
+	.bar .sync button { background: none; border: 0; color: var(--ink-2); cursor: pointer; }
+
+	.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; }
+	@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+	.col h2 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px; font: 600 var(--t-m) var(--sans); color: var(--ink-2); }
+	.col h2 .n { min-width: 18px; padding: 0 6px; border-radius: var(--r-pill); background: var(--raised); font: 500 var(--t-xs)/18px var(--mono); text-align: center; color: var(--ink-2); }
+	.col h2 .n.me { background: var(--accent); color: var(--on-accent); }
+	.col h2 .seg { margin-left: auto; display: inline-flex; gap: 2px; font-weight: 400; font-size: var(--t-xs); }
+	.col h2 .seg span { padding: 1px 8px; border-radius: var(--r-pill); color: var(--ink-3); cursor: pointer; }
+	.col h2 .seg span.on { background: var(--sel); color: var(--ink); }
+
+	.pr { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 10px; border-radius: var(--r-sm); }
+	.pr + .pr { border-top: 1px solid var(--line); border-radius: 0; }
+	.pr:hover { background: var(--hover); }
+	.pr .title { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.pr .line2 { grid-column: 1; display: flex; gap: 8px; align-items: center; font-size: var(--t-xs); color: var(--ink-3); }
+	.pr .line2 .repo { font-family: var(--mono); }
+	.pr .side { grid-row: 1 / span 2; grid-column: 2; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 4px; }
+	.pr .st { display: flex; gap: 6px; align-items: center; }
+	.grp { margin-top: 10px; }
+	.grp:first-of-type { margin-top: 2px; }
+	.grp h3 { margin: 0 0 2px; padding: 0 10px; font: 500 var(--t-xs) var(--mono); color: var(--ink-3); }
+	.grp h3 b { color: var(--ink-2); font-weight: 500; }
+	.pr .line2 .num { font-family: var(--mono); }
+	.via { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="shell">
+	<nav class="rail">
+		<h6>Pinned</h6>
+		<div class="nav"><span class="dot"></span>Board</div>
+		<div class="nav on"><span class="dot"></span>PR Radar<span class="count">5</span></div>
+		<div class="nav"><span class="dot"></span>Memory</div>
+		<div class="nav"><span class="dot"></span>Console</div>
+	</nav>
+
+	<main class="stage"><div class="page">
+		<div class="bar">
+			<h1>PR Radar</h1>
+			<label>Orgs <span class="org">twocircles <b>×</b></span><span class="org">LLjo <b>×</b></span><span class="add">+ add</span></label>
+			<label>Repos <input placeholder="all repos"></label>
+			<label>Every <select><option>1 min</option><option selected>5 min</option><option>15 min</option></select></label>
+			<span class="sync"><span class="chip wait">5 to review</span> synced 1 min ago <button title="Refresh">↻</button></span>
+		</div>
+
+		<div class="cols">
+			<section class="col">
+				<h2>To review <span class="n me">5</span><span class="seg"><span class="on">All</span><span>Me</span><span>Teams</span></span></h2>
+
+				<div class="grp"><h3>LLjo/<b>Barista</b></h3>
+					<div class="pr"><a class="title" href="#">Board: drag cards across lanes</a>
+						<div class="line2"><span class="num">#1226</span><span>kfrost · 3d</span><span class="via">you</span></div>
+						<div class="side"><span class="links"><a href="#">PR</a><a href="#">Files</a><a href="#">Checks</a></span></div></div>
+				</div>
+				<div class="grp"><h3>twocircles/<b>web-platform</b></h3>
+					<div class="pr"><a class="title" href="#">Fix the flaky Safari login e2e</a>
+						<div class="line2"><span class="num">#2209</span><span>jpetersson · 2d</span><span class="via">you</span></div>
+						<div class="side"><span class="links"><a href="#">PR</a><a href="#">Files</a><a href="#">Checks</a></span></div></div>
+					<div class="pr"><a class="title" href="#">Add consent banner to checkout flow</a>
+						<div class="line2"><span class="num">#2214</span><span>mnordin · 2h</span><span class="via">you</span></div>
+						<div class="side"><span class="links"><a href="#">PR</a><a href="#">Files</a><a href="#">Checks</a></span></div></div>
+				</div>
+				<div class="grp"><h3>twocircles/<b>infra</b></h3>
+					<div class="pr"><a class="title" href="#">Bump Node to 22 in the CI images</a>
+						<div class="line2"><span class="num">#391</span><span>dependabot · 1d</span><span>@twocircles/platform</span></div>
+						<div class="side"><span class="links"><a href="#">PR</a><a href="#">Files</a><a href="#">Checks</a></span></div></div>
+				</div>
+				<div class="grp"><h3>twocircles/<b>data-pipeline</b></h3>
+					<div class="pr"><a class="title" href="#">Migrate events table to a partitioned schema</a>
+						<div class="line2"><span class="num">#873</span><span>asha-k · 5h</span><span>@twocircles/data</span></div>
+						<div class="side"><span class="links"><a href="#">PR</a><a href="#">Files</a><a href="#">Checks</a></span></div></div>
+				</div>
+			</section>
+
+			<section class="col">
+				<h2>Mine <span class="n">4</span><span class="seg"><span class="on">Open</span><span>Drafts</span></span></h2>
+
+				<div class="grp"><h3>LLjo/<b>Barista</b></h3>
+					<div class="pr"><a class="title" href="#">Rail: plugin count badges</a>
+						<div class="line2"><span class="num">#1241</span><span>1h</span><span class="links"><a href="#">PR</a><a href="#">Files</a><a href="#">Checks</a></span></div>
+						<div class="side"><span class="st"><span class="chip ok">✓ approved</span></span><span class="ci ok">● CI 12/12</span></div></div>
+				</div>
+				<div class="grp"><h3>twocircles/<b>data-pipeline</b></h3>
+					<div class="pr"><a class="title" href="#">Retry Mux webhooks with backoff</a>
+						<div class="line2"><span class="num">#866</span><span>6h</span><span class="links"><a href="#">PR</a><a href="#">Files</a><a href="#">Checks</a></span></div>
+						<div class="side"><span class="st"><span class="chip wait">◷ review 0/2</span></span><span class="ci wait">◌ CI running</span></div></div>
+				</div>
+				<div class="grp"><h3>twocircles/<b>web-platform</b></h3>
+					<div class="pr"><a class="title" href="#">Partner report: weekly CSV export</a>
+						<div class="line2"><span class="num">#2201</span><span>3d</span><span class="links"><a href="#">PR</a><a href="#">Files</a><a href="#">Checks</a></span></div>
+						<div class="side"><span class="st"><span class="chip bad">⚠ conflict</span><span class="chip bad">± changes</span></span><span class="ci bad">✕ CI 2 failing</span></div></div>
+					<div class="pr"><a class="title" href="#">Spike: GraphQL request batching</a>
+						<div class="line2"><span class="num">#2190</span><span>1w</span><span class="links"><a href="#">PR</a><a href="#">Files</a><a href="#">Checks</a></span></div>
+						<div class="side"><span class="st"><span class="chip draft">draft</span></span><span class="ci ok">● CI 9/9</span></div></div>
+				</div>
+			</section>
+		</div>
+	</div></main>
+</div>
+<button class="theme-toggle" onclick="flip()">light / dark</button>
+<script>
+	const q = new URLSearchParams(location.search).get("theme");
+	if (q) document.documentElement.dataset.theme = q;
+	function flip() { const r = document.documentElement; r.dataset.theme = r.dataset.theme === "light" ? "dark" : "light"; }
+</script>
+</body>
+</html>

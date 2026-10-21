@@ -10,7 +10,7 @@
 	.top h1 { margin: 0; font: 600 var(--t-l) var(--display); }
 	.top span { color: var(--ink-3); font-size: var(--t-s); }
 	.top .theme { margin-left: auto; }
-	.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; height: calc(100vh - 70px); }
+	.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; height: calc(100vh - 70px); }
 	figure { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 	figcaption { font-size: var(--t-s); color: var(--ink-2); display: flex; gap: 8px; }
 	figcaption a { margin-left: auto; }
@@ -21,10 +21,11 @@
 </head>
 <body>
 <div class="top">
-	<h1>PR Radar — three layouts</h1><span>same data in each · open one full size to judge it properly</span>
+	<h1>PR Radar — three layouts + the pick</h1><span>same data in each · open one full size to judge it properly</span>
 	<span class="theme"><a href="?theme=dark">dark</a> · <a href="?theme=light">light</a></span>
 </div>
 <div class="grid">
+	<figure><figcaption><b>Pick</b> B + repo groups from C<a href="mockup-final.html" target="_blank">open ↗</a></figcaption><div class="frame"><iframe data-src="mockup-final.html"></iframe></div></figure>
 	<figure><figcaption><b>A</b> Compact list — one column, one line per PR<a href="mockup-a.html" target="_blank">open ↗</a></figcaption><div class="frame"><iframe data-src="mockup-a.html"></iframe></div></figure>
 	<figure><figcaption><b>B</b> Two columns — To review | Mine<a href="mockup-b.html" target="_blank">open ↗</a></figcaption><div class="frame"><iframe data-src="mockup-b.html"></iframe></div></figure>
 	<figure><figcaption><b>C</b> Grouped by repo — tabs, side settings<a href="mockup-c.html" target="_blank">open ↗</a></figcaption><div class="frame"><iframe data-src="mockup-c.html"></iframe></div></figure>
