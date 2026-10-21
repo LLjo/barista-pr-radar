@@ -1,0 +1,75 @@
+{
+  "viewer": { "login": "LLjo" },
+  "rateLimit": { "cost": 4, "remaining": 4996, "resetAt": "2026-10-21T12:00:00Z" },
+  "review": {
+    "issueCount": 3,
+    "nodes": [
+      {
+        "id": "PR_team", "number": 391, "title": "Bump Node to 22 in the CI images",
+        "url": "https://github.com/twocircles/infra/pull/391", "isDraft": false,
+        "createdAt": "2026-10-20T09:00:00Z", "updatedAt": "2026-10-21T08:00:00Z",
+        "author": { "login": "dependabot" }, "repository": { "nameWithOwner": "twocircles/infra" },
+        "reviewDecision": "REVIEW_REQUIRED", "mergeable": "MERGEABLE",
+        "reviewRequests": { "totalCount": 2, "nodes": [
+          { "requestedReviewer": { "__typename": "User", "login": "someone" } },
+          { "requestedReviewer": { "__typename": "Team", "slug": "platform", "organization": { "login": "twocircles" } } }
+        ] },
+        "latestOpinionatedReviews": { "nodes": [] },
+        "commits": { "nodes": [ { "commit": { "statusCheckRollup": null } } ] }
+      },
+      {
+        "id": "PR_you", "number": 1226, "title": "Board: drag cards across lanes",
+        "url": "https://github.com/LLjo/Barista/pull/1226", "isDraft": false,
+        "createdAt": "2026-10-18T09:00:00Z", "updatedAt": "2026-10-21T07:00:00Z",
+        "author": null, "repository": { "nameWithOwner": "LLjo/Barista" },
+        "reviewDecision": null, "mergeable": "UNKNOWN",
+        "reviewRequests": { "totalCount": 1, "nodes": [ { "requestedReviewer": { "__typename": "User", "login": "LLjo" } } ] },
+        "latestOpinionatedReviews": { "nodes": [] },
+        "commits": { "nodes": [] }
+      },
+      {
+        "id": "PR_noteam", "number": 873, "title": "Migrate events table",
+        "url": "https://github.com/twocircles/data-pipeline/pull/873", "isDraft": false,
+        "createdAt": "2026-10-21T04:00:00Z", "updatedAt": "2026-10-21T04:00:00Z",
+        "author": { "login": "asha-k" }, "repository": { "nameWithOwner": "twocircles/data-pipeline" },
+        "reviewDecision": null, "mergeable": "MERGEABLE",
+        "reviewRequests": { "totalCount": 0, "nodes": [] },
+        "latestOpinionatedReviews": { "nodes": [] },
+        "commits": { "nodes": [] }
+      },
+      {}
+    ]
+  },
+  "direct": { "nodes": [ { "id": "PR_you" }, {} ] },
+  "mine": {
+    "issueCount": 2,
+    "nodes": [
+      {
+        "id": "PR_old", "number": 2190, "title": "Spike: GraphQL request batching",
+        "url": "https://github.com/twocircles/web-platform/pull/2190", "isDraft": true,
+        "createdAt": "2026-10-10T09:00:00Z", "updatedAt": "2026-10-14T09:00:00Z",
+        "author": { "login": "LLjo" }, "repository": { "nameWithOwner": "twocircles/web-platform" },
+        "reviewDecision": null, "mergeable": "MERGEABLE",
+        "reviewRequests": { "totalCount": 0, "nodes": [] },
+        "latestOpinionatedReviews": { "nodes": [] },
+        "commits": { "nodes": [ { "commit": { "statusCheckRollup": {
+          "state": "SUCCESS",
+          "contexts": { "totalCount": 9, "checkRunCountsByState": [ { "state": "SUCCESS", "count": 8 }, { "state": "SKIPPED", "count": 1 } ], "statusContextCountsByState": [] }
+        } } } ] }
+      },
+      {
+        "id": "PR_new", "number": 2201, "title": "Partner report: weekly CSV export",
+        "url": "https://github.com/twocircles/web-platform/pull/2201", "isDraft": false,
+        "createdAt": "2026-10-17T09:00:00Z", "updatedAt": "2026-10-21T09:00:00Z",
+        "author": { "login": "LLjo" }, "repository": { "nameWithOwner": "twocircles/web-platform" },
+        "reviewDecision": "CHANGES_REQUESTED", "mergeable": "CONFLICTING",
+        "reviewRequests": { "totalCount": 1, "nodes": [] },
+        "latestOpinionatedReviews": { "nodes": [ { "state": "APPROVED", "author": { "login": "a" } }, { "state": "CHANGES_REQUESTED", "author": { "login": "b" } } ] },
+        "commits": { "nodes": [ { "commit": { "statusCheckRollup": {
+          "state": "FAILURE",
+          "contexts": { "totalCount": 6, "checkRunCountsByState": [ { "state": "SUCCESS", "count": 3 }, { "state": "FAILURE", "count": 1 }, { "state": "TIMED_OUT", "count": 1 } ], "statusContextCountsByState": [ { "state": "ERROR", "count": 1 } ] }
+        } } } ] }
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+/* The mockup's shared atoms (design/mockup-final.html + tokens.css); tokens come from theme.css. */
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { background: var(--panel); color: var(--ink); font: var(--t-m)/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font: inherit; color: inherit; }
+input, select { font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 3px 8px; }
+
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; height: 18px; border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: 500; white-space: nowrap; }
+.chip.ok   { color: var(--work-fg); background: var(--work-bg); }
+.chip.bad  { color: var(--fail-fg); background: var(--fail-bg); }
+.chip.wait { color: var(--need-fg); background: var(--need-bg); }
+.chip.idle { color: var(--done-fg); background: var(--done-bg); }
+.chip.draft{ color: var(--steel);   background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); }
+.links { display: inline-flex; gap: 10px; font-size: var(--t-s); }
+.links a { color: var(--ink-3); }
+.links a:hover { color: var(--link); text-decoration: none; }
+.ci { font-family: var(--mono); font-size: var(--t-xs); white-space: nowrap; }
+.ci.ok { color: var(--work-fg); } .ci.bad { color: var(--fail-fg); } .ci.wait { color: var(--need-fg); }
