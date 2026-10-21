@@ -4,7 +4,7 @@
 	import * as api from "./lib/api.js";
 	import Column from "./lib/Column.svelte";
 	import Toolbar from "./lib/Toolbar.svelte";
-	import { emptyLine, errorLine, FILTERS_KEY, partialNote, filterMine, filterReview, parseFilters, type MineFilter, type ReviewFilter } from "./lib/format.js";
+	import { emptyLine, errorLine, FILTERS_KEY, partialNote, rateLimitLine, filterMine, filterReview, parseFilters, type MineFilter, type ReviewFilter } from "./lib/format.js";
 	import type { PartState, Settings, Snapshot } from "./lib/types.js";
 
 	let snapshot = $state<Snapshot | null>(null);
@@ -31,7 +31,8 @@
 	const minePart = $derived(snapshot?.parts.mine ?? { fetchedAt: null });
 	const stateOf = (p: PartState) => ({ loading, error: !!p.error, hasData: !!p.fetchedAt });
 	/** A list's own error line; "auth" is the page-wide banner instead. */
-	const partError = (p: PartState) => (p.error && p.error !== "auth" ? errorLine(p.error) : undefined);
+	const partError = (p: PartState) =>
+		p.retryAt ? rateLimitLine(p.retryAt, now) : p.error && p.error !== "auth" ? errorLine(p.error) : undefined;
 
 	async function load() {
 		try {

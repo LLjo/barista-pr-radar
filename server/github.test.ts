@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { AuthError, graphql, RETRY_BACKOFF_MS, searchIssues, type GitHubDeps } from "./github.js";
+import { AuthError, graphql, RATE_LIMIT_DEFAULT_MS, RateLimitError, RETRY_BACKOFF_MS, searchIssues, type GitHubDeps } from "./github.js";
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
 
@@ -116,8 +116,41 @@ describe("searchIssues", () => {
   });
 });
 
-test("a rate-limit 403 becomes one short line and is not retried", async () => {
-  const f = fake(json(403, { message: "You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping…" }));
-  await expect(graphql("q", {}, f.deps)).rejects.toThrow("GitHub rate limit hit (403): showing the last good list until it lifts");
-  expect(f.calls()).toBe(1);
+describe("rate limits back off instead of retrying", () => {
+  const NOW = 1_800_000_000_000;
+  const limited = (headers: Record<string, string> = {}, message = "You have exceeded a secondary rate limit. Please wait a few minutes…") =>
+    new Response(JSON.stringify({ message }), { status: 403, headers });
+  const at = (f: ReturnType<typeof fake>) => {
+    f.deps.now = () => NOW;
+    return graphql("q", {}, f.deps).then(() => { throw new Error("expected a RateLimitError"); }, (e) => e);
+  };
+
+  test("a secondary-rate-limit 403 without Retry-After: a 3 min pause, one request, no backoff sleep", async () => {
+    const f = fake(limited());
+    const err = await at(f);
+    expect(err).toBeInstanceOf(RateLimitError);
+    expect(err.retryAt).toBe(NOW + RATE_LIMIT_DEFAULT_MS);
+    expect(f.calls()).toBe(1);
+    expect(f.slept).toEqual([]);
+  });
+
+  test("Retry-After is honoured", async () => {
+    expect((await at(fake(limited({ "retry-after": "120" })))).retryAt).toBe(NOW + 120_000);
+  });
+
+  test("a Retry-After 429 counts even without the words", async () => {
+    const f = fake(new Response("{}", { status: 429, headers: { "retry-after": "30" } }));
+    expect((await at(f)).retryAt).toBe(NOW + 30_000);
+  });
+
+  test("an exhausted primary limit waits for x-ratelimit-reset", async () => {
+    const reset = (NOW + 600_000) / 1000;
+    const err = await at(fake(limited({ "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(reset) }, "API rate limit exceeded")));
+    expect(err.retryAt).toBe(NOW + 600_000);
+  });
+
+  test("a plain 403 is an ordinary error", async () => {
+    const f = fake(json(403, { message: "Resource not accessible by integration" }));
+    await expect(graphql("q", {}, f.deps)).rejects.toThrow("GitHub 403: Resource not accessible by integration");
+  });
 });

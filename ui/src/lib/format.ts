@@ -130,3 +130,9 @@ export function partialNote(p: { partial?: boolean; kept?: number }): string | u
     ? `GitHub returned partial results; ${kept} PR${kept === 1 ? "" : "s"} kept from the last sync.`
     : "GitHub returned partial results; some PRs may be missing.";
 }
+
+/** A rate-limited list's line, counting down to when the server polls GitHub again. */
+export function rateLimitLine(retryAt: string, now = Date.now()): string {
+  const min = Math.max(1, Math.ceil((Date.parse(retryAt) - now) / 60_000));
+  return `GitHub rate limit, retrying in ${min} min`;
+}

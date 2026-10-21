@@ -105,6 +105,19 @@ describe("collect", () => {
     expect(clean.mine.ok && clean.mine.partial).toBe(false);
   });
 
+  test("a rate-limited search fails its list with a retry time, sent once, the other list unaffected", async () => {
+    const gh = mockGitHub();
+    const real = gh.deps.fetch;
+    gh.deps.now = () => 1_000;
+    gh.deps.fetch = async (t, req) =>
+      kindOf(req) === "mine"
+        ? new Response(JSON.stringify({ message: "You have exceeded a secondary rate limit." }), { status: 403, headers: { "retry-after": "60" } })
+        : real(t, req);
+    const c = await collect(q, gh.deps);
+    expect(c.mine).toEqual({ ok: false, error: "GitHub rate limit", retryAt: 61_000 });
+    expect(c.reviewRequested.ok).toBe(true);
+  });
+
   test("no ids: no details lookup", async () => {
     const gh = mockGitHub();
     const real = gh.deps.fetch;

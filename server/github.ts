@@ -11,6 +11,33 @@ export class AuthError extends Error {
   }
 }
 
+/** Without a Retry-After header, how long a rate limit pauses polling. */
+export const RATE_LIMIT_DEFAULT_MS = 3 * 60_000;
+
+/**
+ * GitHub said slow down (a 403/429 rate limit). Not retried: the poller stops calling GitHub
+ * until `retryAt` (epoch ms), from Retry-After, else x-ratelimit-reset when exhausted, else 3 min.
+ */
+export class RateLimitError extends Error {
+  constructor(readonly retryAt: number) {
+    super("GitHub rate limit");
+    this.name = "RateLimitError";
+  }
+}
+
+/** The 403/429 that is a rate limit, and when it lifts; null for any other answer. */
+export function rateLimitUntil(res: Response, message: string | undefined, now: number): number | null {
+  if (res.status !== 403 && res.status !== 429) return null;
+  const retryAfter = Number(res.headers.get("retry-after"));
+  const remaining = res.headers.get("x-ratelimit-remaining");
+  const reset = Number(res.headers.get("x-ratelimit-reset"));
+  const limited = /rate limit/i.test(message ?? "") || res.headers.has("retry-after") || remaining === "0";
+  if (!limited) return null;
+  if (Number.isFinite(retryAfter) && retryAfter > 0) return now + retryAfter * 1000;
+  if (remaining === "0" && Number.isFinite(reset) && reset > 0) return Math.max(reset * 1000, now + 1000);
+  return now + RATE_LIMIT_DEFAULT_MS;
+}
+
 /** One HTTP call to api.github.com: a GraphQL POST or a REST GET. */
 export interface GitHubRequest {
   method: "GET" | "POST";
@@ -24,6 +51,7 @@ export interface GitHubDeps {
   token: () => string | null;
   invalidate: () => void;
   sleep: (ms: number) => Promise<void>;
+  now?: () => number;
 }
 
 /** Our own cut-off per request: GitHub answers a slow query at ~10 s, so 20 s means a hang. */
@@ -98,10 +126,8 @@ async function call<T>(req: GitHubRequest, dataOf: (body: Body) => T | null, dep
     throw new Error(timedOut ? `GitHub did not answer within ${REQUEST_TIMEOUT_MS / 1000} s` : `GitHub unreachable: ${a.thrown.message}`);
   }
   const { res, body } = a;
-  // GitHub's 403/429 rate-limit text is a paragraph; the UI shows one line.
-  if ((res.status === 403 || res.status === 429) && /rate limit/i.test(body?.message ?? "")) {
-    throw new Error(`GitHub rate limit hit (${res.status}): showing the last good list until it lifts`);
-  }
+  const until = rateLimitUntil(res, body?.message, (deps.now ?? Date.now)());
+  if (until !== null) throw new RateLimitError(until);
   if (!res.ok) throw new Error(`GitHub ${res.status}: ${body?.errors?.[0]?.message || body?.message || res.statusText || "error"}`);
   const data = dataOf(body);
   if (data == null) {

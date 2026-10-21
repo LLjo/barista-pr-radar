@@ -3,7 +3,7 @@ import { resolveToken } from "./auth.js";
 import { collect } from "./collect.js";
 import { buildSearchQueries } from "./query.js";
 import { getSettings } from "./settings.js";
-import { EMPTY_SNAPSHOT, failedEverywhere, mergeSnapshot, nextDelayMs } from "./snapshot.js";
+import { EMPTY_SNAPSHOT, failedEverywhere, mergeSnapshot, nextDelayMs, pausedUntil } from "./snapshot.js";
 import { subjects } from "./subjects.js";
 import type { Snapshot } from "./types.js";
 
@@ -16,12 +16,14 @@ export function getSnapshot(): Snapshot {
 }
 
 async function fetchOnce(): Promise<Snapshot> {
+  // Rate limited: ↻, a settings save and the timer all wait it out without calling GitHub.
+  if (Date.now() < pausedUntil(snapshot)) return snapshot;
   const q = buildSearchQueries(getSettings());
   // Re-resolved on every poll and ↻: a signed-out host is re-asked each time (auth.ts).
   const { token, source } = resolveToken();
   const c = token ? await collect(q) : failedEverywhere("auth");
   for (const [name, part] of [["review", c.reviewRequested], ["mine", c.mine]] as const) {
-    if (!part.ok && part.error !== "auth") console.warn(`[pr-radar] ${name} failed:`, part.error);
+    if (!part.ok && part.error !== "auth" && !part.retryAt) console.warn(`[pr-radar] ${name} failed:`, part.error);
   }
   return mergeSnapshot(snapshot, c, { auth: source, warning: q.warning, now: new Date().toISOString() });
 }

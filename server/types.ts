@@ -43,6 +43,8 @@ export interface PartState {
   /** GitHub's search returned only some matches this time; `kept` rows come from earlier polls. */
   partial?: boolean;
   kept?: number;
+  /** Rate limited: no GitHub calls until this time (ISO); the UI counts down to it. */
+  retryAt?: string;
 }
 
 export interface Snapshot {

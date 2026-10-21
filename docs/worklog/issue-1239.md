@@ -39,3 +39,9 @@ gets no commits (spec acceptance 10), so this worklog lives here.
   the column says "GitHub returned partial results; N kept from the last sync." Rate-limit
   403/429 → one short line. Live: 2 refreshes ok at 2.9–3.2 s total, then GitHub's secondary
   rate limit (account-wide, after this session's debugging) → last good kept, per-list error.
+- Round 3d (tester retest): a 403/429 rate limit (secondary-limit text, Retry-After, or
+  x-ratelimit-remaining 0) is a RateLimitError with retryAt (Retry-After, else reset, else 3 min),
+  never retried; the poller makes NO GitHub calls until it lifts (↻, settings save and timer
+  included) and schedules the next poll after it; the column counts down "GitHub rate limit,
+  retrying in N min". Orphan pid 27145 (cwd = this worktree's plugins/pr-radar) still alive:
+  kill-guard denies it from this session. Instance 1 not restarted after 0a489d5 by request.

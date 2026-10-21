@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Collected } from "./collect.js";
-import { BOOT_RETRY_MS, EMPTY_SNAPSHOT, failedEverywhere, mergeSnapshot, nextDelayMs } from "./snapshot.js";
+import { BOOT_RETRY_MS, EMPTY_SNAPSHOT, failedEverywhere, mergeSnapshot, nextDelayMs, pausedUntil } from "./snapshot.js";
 import type { PrRow } from "./types.js";
 
 const row = (id: string, p: Partial<PrRow> = {}) =>
@@ -97,5 +97,29 @@ describe("(4) nextDelayMs", () => {
   test("all good: the interval; never longer than the interval", () => {
     expect(nextDelayMs(mergeSnapshot(EMPTY_SNAPSHOT, poll(ok(), ok()), meta("T1")), 300)).toBe(300_000);
     expect(nextDelayMs(mergeSnapshot(EMPTY_SNAPSHOT, poll(fail(), fail()), meta("T1")), 60)).toBe(30_000);
+  });
+});
+
+describe("rate-limit pause", () => {
+  const NOW = Date.parse("2026-10-21T12:00:00Z");
+  const limited = { ok: false as const, error: "GitHub rate limit", retryAt: NOW + 180_000 };
+  const good = mergeSnapshot(EMPTY_SNAPSHOT, poll(ok("r1"), ok("m1")), meta("T1"));
+
+  test("a rate-limited list keeps its rows and records when it may try again", () => {
+    const s = mergeSnapshot(good, poll(limited, limited), meta("T2"));
+    expect(s.mine.map((r) => r.id)).toEqual(["m1"]);
+    expect(s.parts.mine).toEqual({ fetchedAt: "T1", error: "GitHub rate limit", retryAt: "2026-10-21T12:03:00.000Z" });
+    expect(pausedUntil(s)).toBe(NOW + 180_000);
+  });
+
+  test("the next poll waits for the limit to lift, never sooner", () => {
+    const s = mergeSnapshot(good, poll(ok("r1"), limited), meta("T2"));
+    expect(nextDelayMs(s, 60, NOW)).toBe(180_000); // not the 60 s interval
+    expect(nextDelayMs(s, 900, NOW)).toBe(900_000); // a longer interval stays
+  });
+
+  test("a good poll after the pause clears it", () => {
+    const s = mergeSnapshot(mergeSnapshot(good, poll(limited, limited), meta("T2")), poll(ok("r1"), ok("m1")), meta("T3"));
+    expect(pausedUntil(s)).toBe(0);
   });
 });

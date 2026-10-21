@@ -1,4 +1,4 @@
-import { AuthError, graphql, searchIssues, type GitHubDeps, type SearchHit } from "./github.js";
+import { AuthError, graphql, RateLimitError, searchIssues, type GitHubDeps, type SearchHit } from "./github.js";
 import { mapMineList, mapReviewList } from "./map.js";
 import { DETAILS_QUERY, type SearchQueries } from "./query.js";
 import type { PrRow } from "./types.js";
@@ -7,7 +7,9 @@ import type { PrRow } from "./types.js";
  * One list's outcome: its rows, or why it failed ("auth" when there is no usable login).
  * `partial`: GitHub's search said it returned only some matches (snapshot.ts keeps the rest).
  */
-export type Part = { ok: true; rows: PrRow[]; total: number; partial: boolean } | { ok: false; error: string };
+export type Part =
+  | { ok: true; rows: PrRow[]; total: number; partial: boolean }
+  | { ok: false; error: string; retryAt?: number };
 
 export interface Collected {
   viewer: string | null;
@@ -15,7 +17,10 @@ export interface Collected {
   mine: Part;
 }
 
-const failed = (err: unknown): Part => ({ ok: false, error: err instanceof AuthError ? "auth" : (err as Error).message });
+const failed = (err: unknown): Part =>
+  err instanceof AuthError ? { ok: false, error: "auth" }
+  : err instanceof RateLimitError ? { ok: false, error: "GitHub rate limit", retryAt: err.retryAt }
+  : { ok: false, error: (err as Error).message };
 
 /**
  * One poll. The three searches (review, direct, mine) go out in parallel, ids only, then each

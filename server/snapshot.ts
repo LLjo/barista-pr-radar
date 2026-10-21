@@ -42,7 +42,9 @@ function mergePart(
   }
   if (part.ok) return { rows: part.rows, total: part.total, state: { fetchedAt: now } };
   // A failed list keeps its last good rows; only its own error changes.
-  return { rows: prev.rows, total: prev.total, state: { fetchedAt: prev.state.fetchedAt, error: part.error } };
+  const state: PartState = { fetchedAt: prev.state.fetchedAt, error: part.error };
+  if (part.retryAt) state.retryAt = new Date(part.retryAt).toISOString();
+  return { rows: prev.rows, total: prev.total, state };
 }
 
 /** Fold one poll into the last snapshot. */
@@ -73,12 +75,19 @@ export function failedEverywhere(error: string): Collected {
   return { viewer: null, reviewRequested: { ok: false, error }, mine: { ok: false, error } };
 }
 
+/** Rate limited: the time (epoch ms) before which no list may call GitHub, or 0. */
+export function pausedUntil(s: Snapshot): number {
+  const at = (p: PartState) => (p.retryAt ? Date.parse(p.retryAt) : 0);
+  return Math.max(at(s.parts.reviewRequested), at(s.parts.mine));
+}
+
 /**
- * Wait before the next poll: the interval, except while a list has failed and has never been
+ * Wait before the next poll: never before a rate limit lifts; the interval, except while a list has failed and has never been
  * fetched since boot — then retry in {@link BOOT_RETRY_MS} rather than leave it empty for 15 min.
  */
-export function nextDelayMs(s: Snapshot, refreshSec: number): number {
+export function nextDelayMs(s: Snapshot, refreshSec: number, now = Date.now()): number {
   const neverFetched = (p: PartState) => !!p.error && !p.fetchedAt;
   const boot = neverFetched(s.parts.reviewRequested) || neverFetched(s.parts.mine);
-  return boot ? Math.min(BOOT_RETRY_MS, refreshSec * 1000) : refreshSec * 1000;
+  const normal = boot ? Math.min(BOOT_RETRY_MS, refreshSec * 1000) : refreshSec * 1000;
+  return Math.max(normal, pausedUntil(s) - now);
 }

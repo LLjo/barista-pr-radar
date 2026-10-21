@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { age, ciLabel, emptyLine, errorLine, partialNote, filterMine, filterReview, groupByRepo, parseFilters, splitRepo, statusChips, syncedAgo } from "./format.js";
+import { age, ciLabel, emptyLine, errorLine, partialNote, rateLimitLine, filterMine, filterReview, groupByRepo, parseFilters, splitRepo, statusChips, syncedAgo } from "./format.js";
 import type { PrRow } from "./types.js";
 
 const NOW = Date.parse("2026-10-21T12:00:00Z");
@@ -98,4 +98,10 @@ test("partialNote", () => {
   expect(partialNote({ partial: true, kept: 2 })).toBe("GitHub returned partial results; 2 PRs kept from the last sync.");
   expect(partialNote({ partial: true, kept: 1 })).toBe("GitHub returned partial results; 1 PR kept from the last sync.");
   expect(partialNote({ partial: true, kept: 0 })).toBe("GitHub returned partial results; some PRs may be missing.");
+});
+
+test("rateLimitLine counts down in whole minutes, never below 1", () => {
+  expect(rateLimitLine("2026-10-21T12:03:00Z", NOW)).toBe("GitHub rate limit, retrying in 3 min");
+  expect(rateLimitLine("2026-10-21T12:00:20Z", NOW)).toBe("GitHub rate limit, retrying in 1 min");
+  expect(rateLimitLine("2026-10-21T11:59:00Z", NOW)).toBe("GitHub rate limit, retrying in 1 min");
 });
