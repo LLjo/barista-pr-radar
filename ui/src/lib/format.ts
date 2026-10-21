@@ -99,3 +99,25 @@ export function filterReview(rows: PrRow[], f: ReviewFilter): PrRow[] {
 export function filterMine(rows: PrRow[], f: MineFilter): PrRow[] {
   return rows.filter((r) => (f === "drafts" ? r.draft : !r.draft));
 }
+
+/**
+ * The banner line for a non-auth snapshot error. The server's messages already start with
+ * "GitHub …" ("GitHub 502: Bad Gateway"); only a bare one (a network failure) gets the prefix.
+ */
+export function errorLine(error: string): string {
+  return /^GitHub\b/.test(error) ? error : `GitHub: ${error}`;
+}
+
+/**
+ * A column's empty-state line. With an error and no last good poll the lists are unknown, not
+ * empty, so it says so; with last good data the (stale) rows stay and this only covers a real empty.
+ */
+export function emptyLine(
+  column: "review" | "mine",
+  s: { loading: boolean; error: boolean; hasData: boolean; filter: ReviewFilter | MineFilter },
+): string {
+  if (s.loading) return "Loading…";
+  if (s.error && !s.hasData) return "Unavailable until GitHub answers.";
+  if (column === "review") return s.filter === "all" ? "Nothing waiting on you." : "Nothing here.";
+  return s.filter === "drafts" ? "No drafts." : "No open PRs.";
+}

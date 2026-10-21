@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { age, ciLabel, filterMine, filterReview, groupByRepo, parseFilters, splitRepo, statusChips, syncedAgo } from "./format.js";
+import { age, ciLabel, emptyLine, errorLine, filterMine, filterReview, groupByRepo, parseFilters, splitRepo, statusChips, syncedAgo } from "./format.js";
 import type { PrRow } from "./types.js";
 
 const NOW = Date.parse("2026-10-21T12:00:00Z");
@@ -64,4 +64,31 @@ test("filters", () => {
   expect(filterMine(mine, "drafts").map((r) => r.id)).toEqual(["d"]);
   expect(parseFilters('{"review":"me","mine":"drafts"}')).toEqual({ review: "me", mine: "drafts" });
   expect(parseFilters("garbage")).toEqual({ review: "all", mine: "open" });
+});
+
+describe("errorLine", () => {
+  test("a server message that already says GitHub is shown once", () => {
+    expect(errorLine("GitHub 502: Bad Gateway")).toBe("GitHub 502: Bad Gateway");
+    expect(errorLine("GitHub returned no data")).toBe("GitHub returned no data");
+  });
+  test("a bare message gets the prefix", () => {
+    expect(errorLine("fetch failed")).toBe("GitHub: fetch failed");
+  });
+});
+
+describe("emptyLine", () => {
+  const base = { loading: false, error: false, hasData: true };
+  test("an error with no last good data: unavailable, not empty", () => {
+    expect(emptyLine("review", { ...base, error: true, hasData: false, filter: "all" })).toBe("Unavailable until GitHub answers.");
+    expect(emptyLine("mine", { ...base, error: true, hasData: false, filter: "open" })).toBe("Unavailable until GitHub answers.");
+  });
+  test("an error over last good data keeps the real empty states", () => {
+    expect(emptyLine("review", { ...base, error: true, filter: "all" })).toBe("Nothing waiting on you.");
+    expect(emptyLine("mine", { ...base, error: true, filter: "open" })).toBe("No open PRs.");
+  });
+  test("loading and filter wording", () => {
+    expect(emptyLine("mine", { ...base, loading: true, filter: "open" })).toBe("Loading…");
+    expect(emptyLine("review", { ...base, filter: "me" })).toBe("Nothing here.");
+    expect(emptyLine("mine", { ...base, filter: "drafts" })).toBe("No drafts.");
+  });
 });

@@ -15,6 +15,7 @@ gets no commits (spec acceptance 10), so this worklog lives here.
 - Side stack (instance 1): enabled, settings persist across restart, repo filter, 400 on bad body; UI screenshot matches mockup; auth banner + filters checked with a mocked snapshot.
 - Settings save during a running poll now reruns after it (`pollFresh`) instead of joining the stale-scope poll.
 - Fix round 1: the SDK token helper caches a null for 30 min, so the auth banner stayed up after `gh auth login`. server/auth.ts resolveToken() never keeps a cached null (re-probe, then invalidate); poller + github.ts use it. Real-gh check: SDK alone stays null after login, the plugin finds the token.
+- Fix round 2: banner no longer doubles "GitHub: GitHub 502" (format.ts errorLine); with an error and no last good poll the columns say "Unavailable until GitHub answers." instead of the empty states (emptyLine).
 
 ## Gotchas
 - `tsc -p server/tsconfig.json` without `--noEmit` writes .js next to every .ts (the spec's

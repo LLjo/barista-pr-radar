@@ -4,7 +4,7 @@
 	import * as api from "./lib/api.js";
 	import Column from "./lib/Column.svelte";
 	import Toolbar from "./lib/Toolbar.svelte";
-	import { FILTERS_KEY, filterMine, filterReview, parseFilters, type MineFilter, type ReviewFilter } from "./lib/format.js";
+	import { emptyLine, errorLine, FILTERS_KEY, filterMine, filterReview, parseFilters, type MineFilter, type ReviewFilter } from "./lib/format.js";
 	import type { Settings, Snapshot } from "./lib/types.js";
 
 	let snapshot = $state<Snapshot | null>(null);
@@ -23,6 +23,8 @@
 	const mineRows = $derived(filterMine(snapshot?.mine ?? [], mineFilter));
 	const count = $derived(snapshot?.reviewRequested.length ?? 0);
 	const loading = $derived(!snapshot || (!snapshot.fetchedAt && !snapshot.error));
+	// fetchedAt survives a failed poll, so it marks "there is last good data to show".
+	const listState = $derived({ loading, error: !!snapshot?.error, hasData: !!snapshot?.fetchedAt });
 
 	async function load() {
 		try {
@@ -78,7 +80,7 @@
 	{#if snapshot?.error === "auth"}
 		<p class="banner">GitHub is not signed in on the Barista host. Run <code>gh auth login</code>.</p>
 	{:else if snapshot?.error}
-		<p class="banner">GitHub: {snapshot.error}</p>
+		<p class="banner">{errorLine(snapshot.error)}</p>
 	{/if}
 	{#if loadError}<p class="banner">PR Radar: {loadError}</p>{/if}
 	{#if saveError}<p class="banner">Settings not saved: {saveError}</p>{/if}
@@ -91,14 +93,14 @@
 			rows={reviewRows} {count} total={snapshot?.totals.reviewRequested ?? 0}
 			segments={[{ value: "all", label: "All" }, { value: "me", label: "Me" }, { value: "teams", label: "Teams" }]}
 			bind:filter={reviewFilter}
-			empty={loading ? "Loading…" : reviewFilter === "all" ? "Nothing waiting on you." : "Nothing here."}
+			empty={emptyLine("review", { ...listState, filter: reviewFilter })}
 		/>
 		<Column
 			title="Mine" mode="mine" {now}
 			rows={mineRows} count={snapshot?.mine.length ?? 0} total={snapshot?.totals.mine ?? 0}
 			segments={[{ value: "open", label: "Open" }, { value: "drafts", label: "Drafts" }]}
 			bind:filter={mineFilter}
-			empty={loading ? "Loading…" : mineFilter === "open" ? "No open PRs." : "No drafts."}
+			empty={emptyLine("mine", { ...listState, filter: mineFilter })}
 		/>
 	</div>
 </div>
