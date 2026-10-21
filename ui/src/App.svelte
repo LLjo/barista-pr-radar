@@ -5,7 +5,7 @@
 	import Column from "./lib/Column.svelte";
 	import Toolbar from "./lib/Toolbar.svelte";
 	import { emptyLine, errorLine, FILTERS_KEY, filterMine, filterReview, parseFilters, type MineFilter, type ReviewFilter } from "./lib/format.js";
-	import type { Settings, Snapshot } from "./lib/types.js";
+	import type { PartState, Settings, Snapshot } from "./lib/types.js";
 
 	let snapshot = $state<Snapshot | null>(null);
 	let settings = $state<Settings>({ orgs: [], repos: [], refreshSec: 300 });
@@ -22,9 +22,16 @@
 	const reviewRows = $derived(filterReview(snapshot?.reviewRequested ?? [], reviewFilter));
 	const mineRows = $derived(filterMine(snapshot?.mine ?? [], mineFilter));
 	const count = $derived(snapshot?.reviewRequested.length ?? 0);
-	const loading = $derived(!snapshot || (!snapshot.fetchedAt && !snapshot.error));
-	// fetchedAt survives a failed poll, so it marks "there is last good data to show".
-	const listState = $derived({ loading, error: !!snapshot?.error, hasData: !!snapshot?.fetchedAt });
+	// Loading = no poll has finished yet: nothing fetched and nothing failed.
+	const loading = $derived(
+		!snapshot || (!snapshot.fetchedAt && !snapshot.error && !snapshot.parts.reviewRequested.error && !snapshot.parts.mine.error),
+	);
+	// Each list fails alone and keeps its own last good fetch (server/snapshot.ts).
+	const reviewPart = $derived(snapshot?.parts.reviewRequested ?? { fetchedAt: null });
+	const minePart = $derived(snapshot?.parts.mine ?? { fetchedAt: null });
+	const stateOf = (p: PartState) => ({ loading, error: !!p.error, hasData: !!p.fetchedAt });
+	/** A list's own error line; "auth" is the page-wide banner instead. */
+	const partError = (p: PartState) => (p.error && p.error !== "auth" ? errorLine(p.error) : undefined);
 
 	async function load() {
 		try {
@@ -79,8 +86,6 @@
 
 	{#if snapshot?.error === "auth"}
 		<p class="banner">GitHub is not signed in on the Barista host. Run <code>gh auth login</code>.</p>
-	{:else if snapshot?.error}
-		<p class="banner">{errorLine(snapshot.error)}</p>
 	{/if}
 	{#if loadError}<p class="banner">PR Radar: {loadError}</p>{/if}
 	{#if saveError}<p class="banner">Settings not saved: {saveError}</p>{/if}
@@ -93,14 +98,16 @@
 			rows={reviewRows} {count} total={snapshot?.totals.reviewRequested ?? 0}
 			segments={[{ value: "all", label: "All" }, { value: "me", label: "Me" }, { value: "teams", label: "Teams" }]}
 			bind:filter={reviewFilter}
-			empty={emptyLine("review", { ...listState, filter: reviewFilter })}
+			error={partError(reviewPart)}
+			empty={emptyLine("review", { ...stateOf(reviewPart), filter: reviewFilter })}
 		/>
 		<Column
 			title="Mine" mode="mine" {now}
 			rows={mineRows} count={snapshot?.mine.length ?? 0} total={snapshot?.totals.mine ?? 0}
 			segments={[{ value: "open", label: "Open" }, { value: "drafts", label: "Drafts" }]}
 			bind:filter={mineFilter}
-			empty={emptyLine("mine", { ...listState, filter: mineFilter })}
+			error={partError(minePart)}
+			empty={emptyLine("mine", { ...stateOf(minePart), filter: mineFilter })}
 		/>
 	</div>
 </div>

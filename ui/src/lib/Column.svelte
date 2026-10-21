@@ -4,7 +4,7 @@
 	import type { PrRow } from "./types.js";
 
 	let {
-		title, mode, rows, count, total, accent = false, segments, filter = $bindable(), empty, now,
+		title, mode, rows, count, total, accent = false, segments, filter = $bindable(), empty, error, now,
 	}: {
 		title: string;
 		mode: "review" | "mine";
@@ -18,6 +18,8 @@
 		segments: { value: F; label: string }[];
 		filter: F;
 		empty: string;
+		/** This list's own fetch error; its last good rows (if any) still show below it. */
+		error?: string;
 		now: number;
 	} = $props();
 
@@ -35,6 +37,8 @@
 			{/each}
 		</span>
 	</h2>
+
+	{#if error}<p class="err">{error}</p>{/if}
 
 	{#each groups as g (g.repo)}
 		{@const [owner, name] = splitRepo(g.repo)}
@@ -63,5 +67,6 @@
 	.grp h3 { margin: 0 0 2px; padding: 0 10px; font: 500 var(--t-xs) var(--mono); color: var(--ink-3); }
 	.grp h3 b { color: var(--ink-2); font-weight: 500; }
 	.grp :global(.pr + .pr) { border-top: 1px solid var(--line); border-radius: 0; }
+	.err { margin: 2px 0 6px; padding: 3px 10px; border-radius: var(--r-sm); background: var(--fail-bg); color: var(--fail-fg); font-size: var(--t-s); }
 	.empty { margin: 8px 10px; font-size: var(--t-s); color: var(--ink-3); }
 </style>

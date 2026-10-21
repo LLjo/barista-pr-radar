@@ -1,1 +1,1 @@
-export type { PrRow, Settings, Snapshot, RefreshSec, Via } from "../../../server/types.js";
+export type { PartState, PrRow, Settings, Snapshot, RefreshSec, Via } from "../../../server/types.js";

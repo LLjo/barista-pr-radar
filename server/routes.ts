@@ -18,9 +18,8 @@ const app = new Hono()
   .get("/settings", (c) => c.json(getSettings()))
   .put("/settings", zValidator("json", settingsBody), (c) => {
     const saved = saveSettings(c.req.valid("json"));
-    // Refetch with the new scope now, and re-arm the timer at the (maybe new) interval.
-    void pollFresh();
-    schedule();
+    // Refetch with the new scope now, then re-arm the timer at the (maybe new) interval.
+    void pollFresh().then(() => schedule());
     return c.json(saved);
   })
   .get("/prs", (c) => c.json(getSnapshot()))

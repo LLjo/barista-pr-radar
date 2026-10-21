@@ -119,6 +119,19 @@ export interface GqlData {
   mine: { issueCount: number; nodes: unknown[] };
 }
 
+/** The review list, oldest request first (the one that has waited longest). */
+export function mapReviewList(nodes: unknown[], directIds: Set<string>): PrRow[] {
+  return prsOf(nodes).map((p) => mapPr(p, directIds)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+/** My PRs, most recently updated first. */
+export function mapMineList(nodes: unknown[]): PrRow[] {
+  return prsOf(nodes).map((p) => mapPr(p)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export const idsOf = (nodes: ({ id?: string } | null)[]): string[] =>
+  nodes.map((n) => n?.id).filter((id): id is string => !!id);
+
 /** The whole response → both lists, ordered: review oldest-first, mine most recently updated first. */
 export function mapResponse(data: GqlData): {
   viewer: string;
@@ -126,17 +139,10 @@ export function mapResponse(data: GqlData): {
   mine: PrRow[];
   totals: { reviewRequested: number; mine: number };
 } {
-  const directIds = new Set(data.direct.nodes.map((n) => n?.id).filter((id): id is string => !!id));
-  const reviewRequested = prsOf(data.review.nodes)
-    .map((p) => mapPr(p, directIds))
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  const mine = prsOf(data.mine.nodes)
-    .map((p) => mapPr(p))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   return {
     viewer: data.viewer.login,
-    reviewRequested,
-    mine,
+    reviewRequested: mapReviewList(data.review.nodes, new Set(idsOf(data.direct.nodes))),
+    mine: mapMineList(data.mine.nodes),
     totals: { reviewRequested: data.review.issueCount, mine: data.mine.issueCount },
   };
 }

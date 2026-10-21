@@ -1,34 +1,13 @@
 import { nats } from "@barista/plugin-sdk";
 import { resolveToken } from "./auth.js";
-import { AuthError, graphql } from "./github.js";
-import { mapResponse, type GqlData } from "./map.js";
-import { buildSearchQueries, DETAILS_QUERY, SEARCH_QUERY } from "./query.js";
+import { collect } from "./collect.js";
+import { buildSearchQueries } from "./query.js";
 import { getSettings } from "./settings.js";
+import { EMPTY_SNAPSHOT, failedEverywhere, mergeSnapshot, nextDelayMs } from "./snapshot.js";
 import { subjects } from "./subjects.js";
 import type { Snapshot } from "./types.js";
 
-interface SearchResult {
-  viewer: GqlData["viewer"];
-  result: { issueCount: number; nodes: ({ id?: string } | null)[] };
-}
-
-const idsOf = (r: SearchResult) => r.result.nodes.map((n) => n?.id).filter((id): id is string => !!id);
-
-/** A search's PRs in full: its ids, then one `nodes(ids:)` lookup (skipped when there are none). */
-async function details(r: SearchResult): Promise<unknown[]> {
-  const ids = idsOf(r);
-  if (!ids.length) return [];
-  return (await graphql<{ nodes: unknown[] }>(DETAILS_QUERY, { ids })).nodes;
-}
-
-let snapshot: Snapshot = {
-  viewer: null,
-  fetchedAt: null,
-  auth: "none",
-  reviewRequested: [],
-  mine: [],
-  totals: { reviewRequested: 0, mine: 0 },
-};
+let snapshot: Snapshot = EMPTY_SNAPSHOT;
 let inFlight: Promise<Snapshot> | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -37,30 +16,14 @@ export function getSnapshot(): Snapshot {
 }
 
 async function fetchOnce(): Promise<Snapshot> {
-  const settings = getSettings();
-  const q = buildSearchQueries(settings);
+  const q = buildSearchQueries(getSettings());
   // Re-resolved on every poll and ↻: a signed-out host is re-asked each time (auth.ts).
   const { token, source } = resolveToken();
-  const base = { auth: source, warning: q.warning };
-  try {
-    if (!token) throw new AuthError();
-    const [review, direct, mine] = await Promise.all(
-      [q.review, q.direct, q.mine].map((query) => graphql<SearchResult>(SEARCH_QUERY, { q: query })),
-    );
-    const [reviewNodes, mineNodes] = await Promise.all([details(review), details(mine)]);
-    const data: GqlData = {
-      viewer: mine.viewer,
-      review: { issueCount: review.result.issueCount, nodes: reviewNodes },
-      direct: direct.result,
-      mine: { issueCount: mine.result.issueCount, nodes: mineNodes },
-    };
-    return { ...mapResponse(data), ...base, fetchedAt: new Date().toISOString() };
-  } catch (err) {
-    // A failed poll keeps the last good lists; only the error changes.
-    const error = err instanceof AuthError ? "auth" : (err as Error).message;
-    if (!(err instanceof AuthError)) console.warn("[pr-radar] poll failed:", error);
-    return { ...snapshot, ...base, error };
+  const c = token ? await collect(q) : failedEverywhere("auth");
+  for (const [name, part] of [["review", c.reviewRequested], ["mine", c.mine]] as const) {
+    if (!part.ok && part.error !== "auth") console.warn(`[pr-radar] ${name} failed:`, part.error);
   }
+  return mergeSnapshot(snapshot, c, { auth: source, warning: q.warning, now: new Date().toISOString() });
 }
 
 /** Poll now. A call while a poll is running joins it rather than starting a second one. */
@@ -92,18 +55,18 @@ export function pollFresh(): Promise<Snapshot> {
   return rerun;
 }
 
-/** (Re)arm the interval from the current settings; called on boot and after a settings save. */
-export function schedule(): void {
+/** (Re)arm the timer: the interval, or a quick retry while a list has never loaded (snapshot.ts). */
+export function schedule(delayMs = nextDelayMs(snapshot, getSettings().refreshSec)): void {
   if (timer) clearTimeout(timer);
   timer = setTimeout(async () => {
     await poll();
     schedule();
-  }, getSettings().refreshSec * 1000);
+  }, delayMs);
   timer.unref?.();
 }
 
-export function startPoller(): void {
-  void poll();
+export async function startPoller(): Promise<void> {
+  await poll();
   schedule();
 }
 

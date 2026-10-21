@@ -36,15 +36,23 @@ export interface PrRow {
 
 export type AuthSource = "env" | "gh" | "none";
 
+/** One list's fetch state: its own last good fetch since boot, and its own error. */
+export interface PartState {
+  fetchedAt: string | null;
+  error?: string;
+}
+
 export interface Snapshot {
   viewer: string | null;
+  /** The last poll where at least one list succeeded. */
   fetchedAt: string | null;
   auth: AuthSource;
-  /** "auth" = no GitHub login on the host; anything else is a message. */
+  /** "auth" = no GitHub login on the host. A list's own failure is in `parts`, not here. */
   error?: string;
   warning?: string;
   reviewRequested: PrRow[];
   mine: PrRow[];
   /** GitHub's issueCount, which may exceed the 50 rows shown. */
   totals: { reviewRequested: number; mine: number };
+  parts: { reviewRequested: PartState; mine: PartState };
 }

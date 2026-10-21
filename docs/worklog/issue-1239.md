@@ -22,3 +22,14 @@ gets no commits (spec acceptance 10), so this worklog lives here.
 - `tsc -p server/tsconfig.json` without `--noEmit` writes .js next to every .ts (the spec's
   verify command) → `noEmit: true` set in server/tsconfig.json.
 - A fresh Barista worktree needs root + shared `bun install` before the plugin typechecks.
+- Fix round 3b (epic lead's tightened spec): collect.ts runs review/direct/mine searches in
+  parallel (ids only) + nodes(ids:) details per list; graphql() retries once after 1 s on
+  502/503/504, no data, our 20 s timeout or a network error; a list that still fails keeps its
+  last good rows + its own error (snapshot.ts mergeSnapshot, Snapshot.parts); a list never loaded
+  since boot re-polls after 30 s (nextDelayMs). Measured: search 2.9–4.9 s, details(35) 2.9–4.5 s;
+  a full-field search is 6.9–8.0 s at first:50 AND first:30 → kept first:50 + two-phase.
+  10/10 live refreshes ok (6.7–10.4 s end to end).
+- Open, GitHub-side: `author:@me org:LLjo org:StayLive` search often returns PARTIAL results
+  (REST shows incomplete_results=true: 35 total, 27 items; or total 23). Not caused by parallel
+  requests (same rate sequential). Mine count varied 18–35 across the 10 refreshes.
+  Hammering it also trips GitHub's secondary rate limit (403).

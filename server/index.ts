@@ -10,4 +10,4 @@ plugin.server.registerShutdown(() => {
   closeDb();
 });
 await plugin.server.start();
-startPoller();
+void startPoller();
