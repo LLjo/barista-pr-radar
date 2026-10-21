@@ -83,7 +83,7 @@
 </script>
 
 <div class="page">
-	<Toolbar {settings} {count} fetchedAt={snapshot?.fetchedAt ?? null} {now} {refreshing} onsave={save} onrefresh={refresh} />
+	<Toolbar {settings} {count} {snapshot} {now} {refreshing} onsave={save} onrefresh={refresh} />
 
 	{#if snapshot?.error === "auth"}
 		<p class="banner">GitHub is not signed in on the Barista host. Run <code>gh auth login</code>.</p>

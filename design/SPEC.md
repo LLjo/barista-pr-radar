@@ -48,7 +48,9 @@ server/
   query.ts            PURE: buildSearchQueries(settings) → {review, direct, mine}; GRAPHQL text
   map.ts              PURE: GraphQL node → PrRow (review state, CI summary, conflict, via, links)
   github.ts           graphql(query, vars): fetch + token from resolveGitHubToken, 401 → invalidate + retry once
-  poller.ts           in-memory Snapshot, poll(), timer at settings.refreshSec, publishes subjects.changed
+  poller.ts           wires poll-loop.ts to the real GitHub, settings and NATS (subjects.changed)
+  poll-loop.ts        createPoller(deps): in-memory Snapshot, poll(), timer at settings.refreshSec or the
+                      end of a rate-limit pause (snapshot.ts nextDelayMs)
   routes.ts           Hono chain + zod validators; export type AppType
   subjects.ts         definePluginSubjects(manifest, { changed: subject<void>() })
   types.ts            Settings, PrRow, Snapshot
@@ -222,7 +224,8 @@ mockup-only: the plugin draws neither, because Barista's shell owns the rail.
   - **Repos** as one text input, a comma list saved on blur or Enter.
   - **Every** as a 1 / 5 / 15 min select.
   - On the right: the review-requested **count chip** ("5 to review", need colours), "synced
-    1 min ago" and a ↻ button that calls `POST /refresh`.
+    1 min ago" (the last *successful* sync; "rate limited · last sync …" during a rate-limit
+    pause, "sync failed · last sync …" when both lists failed) and a ↻ button that calls `POST /refresh`.
   - Every settings change is a `PUT /settings`. There is no Save button and no separate
     settings page.
 - **Two columns** (`grid-template-columns: 1fr 1fr`), stacking to one column below 860 px:
@@ -289,8 +292,8 @@ postMessage type or NATS subject carries a count. The human approved this approa
 
 ## Acceptance
 
-1. Install the plugin from `LLjo/barista-pr-radar` on a Barista through `POST /api/plugins/install`
-   and enable it. It starts, `/health` returns ok, and a "PR Radar" page appears in the ⚙ menu
+1. Install the plugin from `https://github.com/LLjo/barista-pr-radar` (the full URL: Barista
+   rejects `owner/repo`) on a Barista through `POST /api/plugins/install` and enable it. It starts, `/health` returns ok, and a "PR Radar" page appears in the ⚙ menu
    and Ctrl K.
 2. With orgs set, "Review requested" equals github.com's
    `is:pr is:open review-requested:@me org:<org>` for those orgs, and each row says "you" or

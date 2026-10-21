@@ -112,10 +112,17 @@ describe("rate-limit pause", () => {
     expect(pausedUntil(s)).toBe(NOW + 180_000);
   });
 
-  test("the next poll waits for the limit to lift, never sooner", () => {
+  test("the next poll comes exactly when the limit lifts, never sooner or a whole interval later", () => {
     const s = mergeSnapshot(good, poll(ok("r1"), limited), meta("T2"));
     expect(nextDelayMs(s, 60, NOW)).toBe(180_000); // not the 60 s interval
-    expect(nextDelayMs(s, 900, NOW)).toBe(900_000); // a longer interval stays
+    expect(nextDelayMs(s, 300, NOW)).toBe(180_000); // not the 5 min interval
+    expect(nextDelayMs(s, 900, NOW)).toBe(180_000);
+    expect(nextDelayMs(s, 300, NOW + 120_000)).toBe(60_000); // re-armed mid-pause (a settings save)
+  });
+
+  test("once the limit has lifted, the interval again", () => {
+    const s = mergeSnapshot(good, poll(ok("r1"), limited), meta("T2"));
+    expect(nextDelayMs(s, 300, NOW + 180_000)).toBe(300_000);
   });
 
   test("a good poll after the pause clears it", () => {

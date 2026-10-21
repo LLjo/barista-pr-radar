@@ -1,4 +1,4 @@
-import type { PrRow } from "./types.js";
+import type { PrRow, Snapshot } from "./types.js";
 
 /** Compact age: "now", "5m", "2h", "3d", "1w". */
 export function age(iso: string, now = Date.now()): string {
@@ -19,6 +19,24 @@ export function syncedAgo(iso: string | null, now = Date.now()): string {
   if (m < 60) return `synced ${m} min ago`;
   const h = Math.floor(m / 60);
   return `synced ${h} h ago`;
+}
+
+/**
+ * The toolbar's sync line. `fetchedAt` is the last poll where a list succeeded, so a failed poll
+ * must not read as fresh: while rate limited, or after a poll where both lists failed, it says so
+ * and never "just now".
+ */
+export function syncLine(s: Pick<Snapshot, "fetchedAt" | "parts"> | null, now = Date.now()): string {
+  if (!s) return syncedAgo(null, now);
+  const parts = [s.parts.reviewRequested, s.parts.mine];
+  const last = () => {
+    if (!s.fetchedAt) return "not synced yet";
+    const ago = syncedAgo(s.fetchedAt, now);
+    return ago === "synced just now" ? "last sync under 1 min ago" : ago.replace(/^synced/, "last sync");
+  };
+  if (parts.some((p) => p.retryAt && Date.parse(p.retryAt) > now)) return `rate limited · ${last()}`;
+  if (parts.every((p) => p.error)) return `sync failed · ${last()}`;
+  return syncedAgo(s.fetchedAt, now);
 }
 
 /** "owner/name" → ["owner/", "name"] for the group header. */

@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { tick } from "svelte";
-	import { syncedAgo } from "./format.js";
-	import type { RefreshSec, Settings } from "./types.js";
+	import { syncLine } from "./format.js";
+	import type { RefreshSec, Settings, Snapshot } from "./types.js";
 
 	let {
-		settings, count, fetchedAt, now, refreshing, onsave, onrefresh,
+		settings, count, snapshot, now, refreshing, onsave, onrefresh,
 	}: {
 		settings: Settings;
 		count: number;
-		fetchedAt: string | null;
+		snapshot: Snapshot | null;
 		now: number;
 		refreshing: boolean;
 		onsave: (s: Settings) => void;
@@ -80,7 +80,7 @@
 	</label>
 	<span class="sync">
 		<span class="chip wait">{count} to review</span>
-		{syncedAgo(fetchedAt, now)}
+		{syncLine(snapshot, now)}
 		<button type="button" title="Refresh" aria-label="Refresh" class:spin={refreshing} disabled={refreshing} onclick={onrefresh}>↻</button>
 	</span>
 </div>

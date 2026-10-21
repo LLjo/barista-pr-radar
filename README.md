@@ -6,7 +6,7 @@ conflict. Every row links to the PR, its files and its checks.
 
 ## Install
 
-In Barista: Plugins → **Install from repo** → `LLjo/barista-pr-radar`, then enable it.
+In Barista: Plugins → **Install from repo** → `https://github.com/LLjo/barista-pr-radar`, then enable it.
 A "PR Radar" page appears in the ⚙ menu and Ctrl K.
 
 It needs a GitHub login on the **Barista host**: `gh auth login` (or `GITHUB_TOKEN` / `GH_TOKEN`

@@ -82,12 +82,15 @@ export function pausedUntil(s: Snapshot): number {
 }
 
 /**
- * Wait before the next poll: never before a rate limit lifts; the interval, except while a list has failed and has never been
- * fetched since boot — then retry in {@link BOOT_RETRY_MS} rather than leave it empty for 15 min.
+ * Wait before the next poll. Rate limited: exactly until the limit lifts — not sooner, and not a
+ * whole interval later either (a settings save during the pause re-arms here too). Otherwise the
+ * interval, except while a list has failed and has never been fetched since boot — then retry in
+ * {@link BOOT_RETRY_MS} rather than leave it empty for 15 min.
  */
 export function nextDelayMs(s: Snapshot, refreshSec: number, now = Date.now()): number {
+  const paused = pausedUntil(s) - now;
+  if (paused > 0) return paused;
   const neverFetched = (p: PartState) => !!p.error && !p.fetchedAt;
   const boot = neverFetched(s.parts.reviewRequested) || neverFetched(s.parts.mine);
-  const normal = boot ? Math.min(BOOT_RETRY_MS, refreshSec * 1000) : refreshSec * 1000;
-  return Math.max(normal, pausedUntil(s) - now);
+  return boot ? Math.min(BOOT_RETRY_MS, refreshSec * 1000) : refreshSec * 1000;
 }

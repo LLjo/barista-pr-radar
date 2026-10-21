@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { age, ciLabel, emptyLine, errorLine, partialNote, rateLimitLine, filterMine, filterReview, groupByRepo, parseFilters, splitRepo, statusChips, syncedAgo } from "./format.js";
+import { age, ciLabel, emptyLine, errorLine, partialNote, rateLimitLine, filterMine, filterReview, groupByRepo, parseFilters, splitRepo, statusChips, syncedAgo, syncLine } from "./format.js";
 import type { PrRow } from "./types.js";
 
 const NOW = Date.parse("2026-10-21T12:00:00Z");
@@ -25,6 +25,36 @@ test("syncedAgo", () => {
   expect(syncedAgo(null, NOW)).toBe("not synced yet");
   expect(syncedAgo("2026-10-21T11:59:40Z", NOW)).toBe("synced just now");
   expect(syncedAgo("2026-10-21T11:59:00Z", NOW)).toBe("synced 1 min ago");
+});
+
+describe("syncLine", () => {
+  const T = "2026-10-21T11:59:40Z"; // 20 s before NOW
+  const snap = (review: object, mine: object, fetchedAt: string | null = T) =>
+    ({ fetchedAt, parts: { reviewRequested: { fetchedAt, ...review }, mine: { fetchedAt, ...mine } } });
+  const limited = { error: "GitHub rate limit", retryAt: "2026-10-21T12:03:00Z" };
+
+  test("a good poll reads as before", () => {
+    expect(syncLine(null, NOW)).toBe("not synced yet");
+    expect(syncLine(snap({}, {}), NOW)).toBe("synced just now");
+  });
+
+  test("rate limited: says so, with the last successful sync, never 'just now'", () => {
+    expect(syncLine(snap(limited, limited), NOW)).toBe("rate limited · last sync under 1 min ago");
+    expect(syncLine(snap(limited, limited, "2026-10-21T11:56:00Z"), NOW)).toBe("rate limited · last sync 4 min ago");
+    expect(syncLine(snap({}, limited), NOW)).toBe("rate limited · last sync under 1 min ago");
+    expect(syncLine(snap(limited, limited, null), NOW)).toBe("rate limited · not synced yet");
+  });
+
+  test("both lists failed: never 'just now'", () => {
+    const e = { error: "GitHub 502: Bad Gateway" };
+    expect(syncLine(snap(e, e), NOW)).toBe("sync failed · last sync under 1 min ago");
+    expect(syncLine(snap(e, {}), NOW)).toBe("synced just now"); // one list came back: a real sync
+  });
+
+  test("a pause that has lifted is no longer reported as rate limited", () => {
+    const lifted = { error: "GitHub rate limit", retryAt: "2026-10-21T11:59:00Z" };
+    expect(syncLine(snap({}, lifted), NOW)).toBe("synced just now");
+  });
 });
 
 test("splitRepo", () => {
