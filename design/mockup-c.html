@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PR Radar — C · Grouped by repo</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+	/* C · By repo: one feed grouped under repo headers, a tab picks Review / Mine / All.
+	   Settings live in a narrow side panel that stays open (or folds away). */
+	.wrap { display: grid; grid-template-columns: 1fr 230px; height: 100%; }
+	.main { padding: 16px 20px 30px; overflow: auto; }
+	header { display: flex; align-items: center; gap: 14px; }
+	header h1 { margin: 0; font: 600 var(--t-l) var(--display); }
+	.tabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: var(--r-pill); background: var(--raised); }
+	.tabs span { padding: 2px 12px; border-radius: var(--r-pill); font-size: var(--t-s); color: var(--ink-2); cursor: pointer; }
+	.tabs span.on { background: var(--sel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-2); }
+	.tabs .n { font-family: var(--mono); font-size: var(--t-xs); color: var(--ink-3); margin-left: 4px; }
+	.tabs .on .n.me { color: var(--accent); }
+	header .sync { margin-left: auto; font-size: var(--t-s); color: var(--ink-3); }
+
+	.repo { margin-top: 18px; }
+	.repo h3 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 2px; padding: 0 6px; font: 500 var(--t-s) var(--mono); color: var(--ink-3); }
+	.repo h3 .org { color: var(--ink-3); opacity: .8; }
+	.repo h3 b { color: var(--ink-2); font-weight: 500; }
+	.row { display: grid; grid-template-columns: 54px 1fr auto auto; align-items: center; gap: 12px; padding: 5px 6px; border-radius: 8px; }
+	.row:hover { background: var(--hover); }
+	.kind { font-size: var(--t-xs); text-align: center; border-radius: var(--r-pill); padding: 0 6px; }
+	.kind.rev { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+	.kind.mine { color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+	.row .t { min-width: 0; display: flex; gap: 8px; align-items: baseline; }
+	.row .t a { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.row .t .num { font: var(--t-xs) var(--mono); color: var(--ink-3); }
+	.row .t .who { font-size: var(--t-xs); color: var(--ink-3); white-space: nowrap; }
+	.row .st { display: flex; gap: 6px; align-items: center; }
+	.icons { display: inline-flex; gap: 2px; }
+	.icons a { width: 22px; height: 20px; display: grid; place-items: center; border-radius: 6px; color: var(--ink-3); font-size: var(--t-s); }
+	.icons a:hover { background: var(--sel); color: var(--link); text-decoration: none; }
+
+	aside { border-left: 1px solid var(--line); padding: 16px 16px; display: flex; flex-direction: column; gap: 14px; font-size: var(--t-s); color: var(--ink-2); }
+	aside h4 { margin: 0; font: 600 var(--t-xs) var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); display: flex; }
+	aside h4 span { margin-left: auto; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
+	aside .field { display: flex; flex-direction: column; gap: 6px; }
+	aside .orgs { display: flex; flex-wrap: wrap; gap: 4px; }
+	aside .org { padding: 1px 8px; border-radius: var(--r-pill); background: var(--sel); color: var(--ink); }
+	aside .org b { font-weight: 400; color: var(--ink-3); margin-left: 2px; }
+	aside input, aside select { width: 100%; }
+	aside .hint { font-size: var(--t-xs); color: var(--ink-3); }
+	aside .legend { display: grid; gap: 6px; margin-top: auto; font-size: var(--t-xs); color: var(--ink-3); }
+</style>
+</head>
+<body>
+<div class="shell">
+	<nav class="rail">
+		<h6>Pinned</h6>
+		<div class="nav"><span class="dot"></span>Board</div>
+		<div class="nav on"><span class="dot"></span>PR Radar<span class="count">5</span></div>
+		<div class="nav"><span class="dot"></span>Memory</div>
+		<div class="nav"><span class="dot"></span>Console</div>
+	</nav>
+
+	<main class="stage"><div class="wrap">
+		<div class="main">
+			<header>
+				<h1>PR Radar</h1>
+				<div class="tabs"><span class="on">All<span class="n">9</span></span><span>Review<span class="n me">5</span></span><span>Mine<span class="n">4</span></span></div>
+				<span class="sync">1 min ago · ↻</span>
+			</header>
+
+			<div class="repo"><h3><span class="org">twocircles/</span><b>web-platform</b></h3>
+				<div class="row"><span class="kind rev">review</span><div class="t"><a href="#">Add consent banner to checkout flow</a><span class="num">#2214</span><span class="who">mnordin · 2h · you</span></div><span class="st"></span>
+					<span class="icons"><a href="#" title="PR">↗</a><a href="#" title="Files">±</a><a href="#" title="Checks">✓</a></span></div>
+				<div class="row"><span class="kind rev">review</span><div class="t"><a href="#">Fix the flaky Safari login e2e</a><span class="num">#2209</span><span class="who">jpetersson · 2d · you</span></div><span class="st"></span>
+					<span class="icons"><a href="#" title="PR">↗</a><a href="#" title="Files">±</a><a href="#" title="Checks">✓</a></span></div>
+				<div class="row"><span class="kind mine">mine</span><div class="t"><a href="#">Partner report: weekly CSV export</a><span class="num">#2201</span><span class="who">3d</span></div>
+					<span class="st"><span class="chip bad">± changes</span><span class="chip bad">⚠ conflict</span><span class="ci bad">✕ 2</span></span>
+					<span class="icons"><a href="#" title="PR">↗</a><a href="#" title="Files">±</a><a href="#" title="Checks">✓</a></span></div>
+				<div class="row"><span class="kind mine">mine</span><div class="t"><a href="#">Spike: GraphQL request batching</a><span class="num">#2190</span><span class="who">1w</span></div>
+					<span class="st"><span class="chip draft">draft</span><span class="ci ok">● 9/9</span></span>
+					<span class="icons"><a href="#" title="PR">↗</a><a href="#" title="Files">±</a><a href="#" title="Checks">✓</a></span></div>
+			</div>
+
+			<div class="repo"><h3><span class="org">twocircles/</span><b>data-pipeline</b></h3>
+				<div class="row"><span class="kind rev">review</span><div class="t"><a href="#">Migrate events table to a partitioned schema</a><span class="num">#873</span><span class="who">asha-k · 5h · @data</span></div><span class="st"></span>
+					<span class="icons"><a href="#" title="PR">↗</a><a href="#" title="Files">±</a><a href="#" title="Checks">✓</a></span></div>
+				<div class="row"><span class="kind mine">mine</span><div class="t"><a href="#">Retry Mux webhooks with backoff</a><span class="num">#866</span><span class="who">6h</span></div>
+					<span class="st"><span class="chip wait">◷ review 0/2</span><span class="ci wait">◌ running</span></span>
+					<span class="icons"><a href="#" title="PR">↗</a><a href="#" title="Files">±</a><a href="#" title="Checks">✓</a></span></div>
+			</div>
+
+			<div class="repo"><h3><span class="org">twocircles/</span><b>infra</b></h3>
+				<div class="row"><span class="kind rev">review</span><div class="t"><a href="#">Bump Node to 22 in the CI images</a><span class="num">#391</span><span class="who">dependabot · 1d · @platform</span></div><span class="st"></span>
+					<span class="icons"><a href="#" title="PR">↗</a><a href="#" title="Files">±</a><a href="#" title="Checks">✓</a></span></div>
+			</div>
+
+			<div class="repo"><h3><span class="org">LLjo/</span><b>Barista</b></h3>
+				<div class="row"><span class="kind rev">review</span><div class="t"><a href="#">Board: drag cards across lanes</a><span class="num">#1226</span><span class="who">kfrost · 3d · you</span></div><span class="st"></span>
+					<span class="icons"><a href="#" title="PR">↗</a><a href="#" title="Files">±</a><a href="#" title="Checks">✓</a></span></div>
+				<div class="row"><span class="kind mine">mine</span><div class="t"><a href="#">Rail: plugin count badges</a><span class="num">#1241</span><span class="who">1h</span></div>
+					<span class="st"><span class="chip ok">✓ approved</span><span class="ci ok">● 12/12</span></span>
+					<span class="icons"><a href="#" title="PR">↗</a><a href="#" title="Files">±</a><a href="#" title="Checks">✓</a></span></div>
+			</div>
+		</div>
+
+		<aside>
+			<h4>Settings <span>hide ›</span></h4>
+			<div class="field">Orgs
+				<div class="orgs"><span class="org">twocircles <b>×</b></span><span class="org">LLjo <b>×</b></span></div>
+				<input placeholder="add an org…"></div>
+			<div class="field">Repos <input placeholder="all repos"><span class="hint">comma list, e.g. web-platform, infra</span></div>
+			<div class="field">Refresh <select><option>1 min</option><option selected>5 min</option><option>15 min</option></select></div>
+			<div class="legend">
+				<span>↗ PR · ± files · ✓ checks</span>
+				<span>Signed in to GitHub as <span class="mono">LLjo</span> (gh)</span>
+			</div>
+		</aside>
+	</div></main>
+</div>
+<button class="theme-toggle" onclick="flip()">light / dark</button>
+<script>
+	const q = new URLSearchParams(location.search).get("theme");
+	if (q) document.documentElement.dataset.theme = q;
+	function flip() { const r = document.documentElement; r.dataset.theme = r.dataset.theme === "light" ? "dark" : "light"; }
+</script>
+</body>
+</html>

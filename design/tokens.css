@@ -1,0 +1,68 @@
+/*
+ * Mockup tokens. Dark = Barista's own `@barista/plugin-sdk/ui/theme.css` values (the plugin
+ * imports that file for real). Light is a mockup-only check that the layout still reads
+ * on a light ground: `?theme=light` or the toggle.
+ */
+:root {
+	--bg: #13100E; --panel: #1A1512; --raised: #241D18; --hover: rgba(255,236,214,.06);
+	--line: rgba(255,236,214,.08); --line-2: rgba(255,236,214,.15); --sel: #3A302A;
+	--ink: #F5ECDF; --ink-2: #D3C4B2; --ink-3: #B3A492; --accent: #F2B27C; --on-accent: #2A190C;
+	--link: #A9C8F5;
+	--need-fg: #F9D3AA; --need-bg: #3F2A1A;
+	--work-fg: #BEE0A4; --work-bg: #233020;
+	--done-fg: #D5C7B5; --done-bg: #2E2722;
+	--fail-fg: #F6BDB6; --fail-bg: #4B2326;
+	--violet: #B9A3EE; --steel: #AEB5C4;
+	--display: "Quicksand", ui-rounded, system-ui, sans-serif;
+	--sans: "IBM Plex Sans", system-ui, sans-serif;
+	--mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+	--t-xs: 11px; --t-s: 12px; --t-m: 13px; --t-b: 14.5px; --t-l: 18px;
+	--r-sm: 10px; --r-md: 14px; --r-lg: 22px; --r-pill: 999px;
+	color-scheme: dark;
+}
+:root[data-theme="light"] {
+	--bg: #F4EEE7; --panel: #FFFDFA; --raised: #F3ECE3; --hover: rgba(60,40,20,.05);
+	--line: rgba(60,40,20,.10); --line-2: rgba(60,40,20,.18); --sel: #E8DED2;
+	--ink: #2A1F17; --ink-2: #54453A; --ink-3: #6E5E50; --accent: #A85A1E; --on-accent: #FFF6EE;
+	--link: #2C5A9E;
+	--need-fg: #84460F; --need-bg: #F8E4CE;
+	--work-fg: #2B6519; --work-bg: #E0EFD5;
+	--done-fg: #54453A; --done-bg: #ECE3D8;
+	--fail-fg: #9E2D25; --fail-bg: #F8DCD8;
+	--violet: #5E42B3; --steel: #4F5868;
+	color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); font: var(--t-m)/1.45 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font: inherit; color: inherit; }
+
+/* The fake Barista rail, only so the sidebar count is visible in the mockup. */
+.shell { display: flex; height: 100vh; gap: 10px; padding: 10px; }
+.rail { width: 168px; flex: none; background: var(--panel); border-radius: var(--r-lg); padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; }
+.rail h6 { margin: 4px 8px 8px; font: 600 var(--t-xs) var(--sans); color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
+.rail .nav { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--r-sm); color: var(--ink-2); font-size: var(--t-m); }
+.rail .nav.on { background: var(--sel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-2); }
+.rail .nav .count { margin-left: auto; min-width: 18px; padding: 0 6px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); font: 600 var(--t-xs)/18px var(--mono); text-align: center; }
+.rail .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); }
+.stage { flex: 1; min-width: 0; background: var(--panel); border-radius: var(--r-lg); overflow: auto; }
+
+/* Shared atoms */
+.mono { font-family: var(--mono); }
+.dim { color: var(--ink-3); }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; height: 18px; border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: 500; white-space: nowrap; }
+.chip.ok   { color: var(--work-fg); background: var(--work-bg); }
+.chip.bad  { color: var(--fail-fg); background: var(--fail-bg); }
+.chip.wait { color: var(--need-fg); background: var(--need-bg); }
+.chip.idle { color: var(--done-fg); background: var(--done-bg); }
+.chip.draft{ color: var(--steel);   background: transparent; box-shadow: inset 0 0 0 1px var(--line-2); }
+.links { display: inline-flex; gap: 10px; font-size: var(--t-s); }
+.links a { color: var(--ink-3); }
+.links a:hover { color: var(--link); text-decoration: none; }
+.ci { font-family: var(--mono); font-size: var(--t-xs); }
+.ci.ok { color: var(--work-fg); } .ci.bad { color: var(--fail-fg); } .ci.wait { color: var(--need-fg); }
+.theme-toggle { position: fixed; left: 24px; bottom: 22px; background: var(--raised); border: 1px solid var(--line-2); border-radius: var(--r-pill); padding: 3px 10px; font-size: var(--t-xs); color: var(--ink-2); cursor: pointer; }
+input, select { font: inherit; color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 3px 8px; }
