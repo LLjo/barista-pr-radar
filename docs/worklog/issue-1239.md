@@ -12,6 +12,8 @@ gets no commits (spec acceptance 10), so this worklog lives here.
 - UI: Toolbar / Column / PrRow + format.ts; api.ts uses plain fetch, not `hc<AppType>` (that
   drags server modules into svelte-check).
 - Live GraphQL check against github.com with org LLjo: cost 4, lists map correctly.
+- Side stack (instance 1): enabled, settings persist across restart, repo filter, 400 on bad body; UI screenshot matches mockup; auth banner + filters checked with a mocked snapshot.
+- Settings save during a running poll now reruns after it (`pollFresh`) instead of joining the stale-scope poll.
 
 ## Gotchas
 - `tsc -p server/tsconfig.json` without `--noEmit` writes .js next to every .ts (the spec's

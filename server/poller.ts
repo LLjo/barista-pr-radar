@@ -51,6 +51,21 @@ export function poll(): Promise<Snapshot> {
   return inFlight;
 }
 
+let rerun: Promise<Snapshot> | null = null;
+
+/**
+ * Poll with the settings as they are NOW: a running poll may have read the old scope, so
+ * wait for it and poll once more. Several saves during one poll share that one rerun.
+ */
+export function pollFresh(): Promise<Snapshot> {
+  if (!inFlight) return poll();
+  rerun ??= inFlight.catch(() => undefined).then(() => {
+    rerun = null;
+    return poll();
+  });
+  return rerun;
+}
+
 /** (Re)arm the interval from the current settings; called on boot and after a settings save. */
 export function schedule(): void {
   if (timer) clearTimeout(timer);

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
-import { getSnapshot, poll, schedule } from "./poller.js";
+import { getSnapshot, poll, pollFresh, schedule } from "./poller.js";
 import { getSettings, saveSettings } from "./settings.js";
 import { REFRESH_CHOICES } from "./types.js";
 
@@ -19,7 +19,7 @@ const app = new Hono()
   .put("/settings", zValidator("json", settingsBody), (c) => {
     const saved = saveSettings(c.req.valid("json"));
     // Refetch with the new scope now, and re-arm the timer at the (maybe new) interval.
-    void poll();
+    void pollFresh();
     schedule();
     return c.json(saved);
   })
