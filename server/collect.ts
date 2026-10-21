@@ -1,15 +1,13 @@
-import { AuthError, graphql, type GitHubDeps } from "./github.js";
-import { idsOf, mapMineList, mapReviewList } from "./map.js";
-import { DETAILS_QUERY, SEARCH_QUERY, type SearchQueries } from "./query.js";
+import { AuthError, graphql, searchIssues, type GitHubDeps, type SearchHit } from "./github.js";
+import { mapMineList, mapReviewList } from "./map.js";
+import { DETAILS_QUERY, type SearchQueries } from "./query.js";
 import type { PrRow } from "./types.js";
 
-interface SearchResult {
-  viewer: { login: string };
-  result: { issueCount: number; nodes: ({ id?: string } | null)[] };
-}
-
-/** One list's outcome: its rows, or why it failed ("auth" when there is no usable login). */
-export type Part = { ok: true; rows: PrRow[]; total: number } | { ok: false; error: string };
+/**
+ * One list's outcome: its rows, or why it failed ("auth" when there is no usable login).
+ * `partial`: GitHub's search said it returned only some matches (snapshot.ts keeps the rest).
+ */
+export type Part = { ok: true; rows: PrRow[]; total: number; partial: boolean } | { ok: false; error: string };
 
 export interface Collected {
   viewer: string | null;
@@ -25,27 +23,29 @@ const failed = (err: unknown): Part => ({ ok: false, error: err instanceof AuthE
  * a list that still fails fails alone: the other list's rows come back regardless.
  */
 export async function collect(q: SearchQueries, deps?: GitHubDeps): Promise<Collected> {
-  const search = (query: string) => graphql<SearchResult>(SEARCH_QUERY, { q: query }, deps);
-  const details = async (r: SearchResult): Promise<unknown[]> => {
-    const ids = idsOf(r.result.nodes);
-    if (!ids.length) return [];
-    return (await graphql<{ nodes: unknown[] }>(DETAILS_QUERY, { ids }, deps)).nodes;
+  let viewer: string | null = null;
+  const details = async (hit: SearchHit): Promise<unknown[]> => {
+    if (!hit.ids.length) return [];
+    const d = await graphql<{ viewer: { login: string }; nodes: unknown[] }>(DETAILS_QUERY, { ids: hit.ids }, deps);
+    viewer ??= d.viewer.login;
+    return d.nodes;
   };
 
-  const review = search(q.review);
-  const direct = search(q.direct);
-  const mine = search(q.mine);
+  const review = searchIssues(q.review, deps);
+  const direct = searchIssues(q.direct, deps);
+  const mine = searchIssues(q.mine, deps);
 
   const reviewPart = (async (): Promise<Part> => {
     const [r, d] = await Promise.all([review, direct]);
-    return { ok: true, rows: mapReviewList(await details(r), new Set(idsOf(d.result.nodes))), total: r.result.issueCount };
+    // A partial direct search could call a "you" request a team one, so it marks the list partial too.
+    const rows = mapReviewList(await details(r), new Set(d.ids));
+    return { ok: true, rows, total: r.total, partial: r.incomplete || d.incomplete };
   })().catch(failed);
   const minePart = (async (): Promise<Part> => {
     const m = await mine;
-    return { ok: true, rows: mapMineList(await details(m)), total: m.result.issueCount };
+    return { ok: true, rows: mapMineList(await details(m)), total: m.total, partial: m.incomplete };
   })().catch(failed);
 
-  const [reviewRequested, minePartDone] = await Promise.all([reviewPart, minePart]);
-  const viewer = (await Promise.any([review, direct, mine]).catch(() => null))?.viewer.login ?? null;
-  return { viewer, reviewRequested, mine: minePartDone };
+  const [reviewRequested, mineDone] = await Promise.all([reviewPart, minePart]);
+  return { viewer, reviewRequested, mine: mineDone };
 }

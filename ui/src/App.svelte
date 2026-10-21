@@ -4,7 +4,7 @@
 	import * as api from "./lib/api.js";
 	import Column from "./lib/Column.svelte";
 	import Toolbar from "./lib/Toolbar.svelte";
-	import { emptyLine, errorLine, FILTERS_KEY, filterMine, filterReview, parseFilters, type MineFilter, type ReviewFilter } from "./lib/format.js";
+	import { emptyLine, errorLine, FILTERS_KEY, partialNote, filterMine, filterReview, parseFilters, type MineFilter, type ReviewFilter } from "./lib/format.js";
 	import type { PartState, Settings, Snapshot } from "./lib/types.js";
 
 	let snapshot = $state<Snapshot | null>(null);
@@ -98,7 +98,7 @@
 			rows={reviewRows} {count} total={snapshot?.totals.reviewRequested ?? 0}
 			segments={[{ value: "all", label: "All" }, { value: "me", label: "Me" }, { value: "teams", label: "Teams" }]}
 			bind:filter={reviewFilter}
-			error={partError(reviewPart)}
+			error={partError(reviewPart)} note={partialNote(reviewPart)}
 			empty={emptyLine("review", { ...stateOf(reviewPart), filter: reviewFilter })}
 		/>
 		<Column
@@ -106,7 +106,7 @@
 			rows={mineRows} count={snapshot?.mine.length ?? 0} total={snapshot?.totals.mine ?? 0}
 			segments={[{ value: "open", label: "Open" }, { value: "drafts", label: "Drafts" }]}
 			bind:filter={mineFilter}
-			error={partError(minePart)}
+			error={partError(minePart)} note={partialNote(minePart)}
 			empty={emptyLine("mine", { ...stateOf(minePart), filter: mineFilter })}
 		/>
 	</div>

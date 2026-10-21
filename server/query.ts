@@ -75,16 +75,12 @@ const PR_FRAGMENT = `fragment Pr on PullRequest {
 
 /**
  * A poll is several small requests, not one: the combined query took 8–11 s and GitHub cut it
- * at its ~10 s limit (a 502, or a 200 with no data). The search alone is 4–5 s even for ids, and
- * the PR fields add 2–3 s, so each list is a search for ids, then one `nodes(ids:)` for details.
- * The three searches run in parallel.
+ * at its ~10 s limit (a 502, or a 200 with no data). The search alone is 3–5 s even for ids, and
+ * the PR fields add 3–4 s, so each list is a REST search for ids (github.ts searchIssues, which
+ * also reports partial results), then one `nodes(ids:)` lookup for details.
  */
-export const SEARCH_QUERY = `query($q:String!){
-  viewer{login}
-  result: search(type:ISSUE, query:$q, first:50){ issueCount nodes{... on PullRequest{id}} }
-}`;
-
 export const DETAILS_QUERY = `query($ids:[ID!]!){
+  viewer{login}
   nodes(ids:$ids){ ...Pr }
 }
 ${PR_FRAGMENT}`;

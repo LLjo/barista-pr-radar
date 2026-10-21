@@ -1,37 +1,41 @@
 import { describe, expect, test } from "bun:test";
 import fixture from "./fixtures/response.json";
 import { collect } from "./collect.js";
-import type { GitHubDeps } from "./github.js";
+import type { GitHubDeps, GitHubRequest } from "./github.js";
 import { buildSearchQueries } from "./query.js";
 
 type Kind = "review" | "direct" | "mine" | "details";
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
 const allPrs = [...fixture.review.nodes, ...fixture.mine.nodes] as { id?: string }[];
 
-/** Which request a mocked fetch got: a details lookup, or one of the three searches. */
-function kindOf(query: string, vars: Record<string, unknown>): Kind {
-  if (query.includes("nodes(ids:")) return "details";
-  const q = String(vars.q);
+/** Which request a mocked fetch got: the GraphQL details lookup, or one of the three REST searches. */
+function kindOf(req: GitHubRequest): Kind {
+  if (req.path === "/graphql") return "details";
+  const q = decodeURIComponent(req.path);
   return q.includes("user-review-requested") ? "direct" : q.includes("review-requested") ? "review" : "mine";
 }
 
-function searchAnswer(kind: Exclude<Kind, "details">) {
-  const nodes = kind === "direct" ? fixture.direct.nodes : kind === "review" ? fixture.review.nodes : fixture.mine.nodes;
-  return json(200, { data: { viewer: { login: "LLjo" }, result: { issueCount: nodes.filter((n) => "id" in n).length, nodes } } });
+const idsFor = (kind: Exclude<Kind, "details">) =>
+  ((kind === "direct" ? fixture.direct.nodes : kind === "review" ? fixture.review.nodes : fixture.mine.nodes) as { id?: string }[])
+    .map((n) => n.id).filter((id): id is string => !!id);
+
+function searchAnswer(kind: Exclude<Kind, "details">, incomplete = false) {
+  const ids = idsFor(kind);
+  return json(200, { total_count: ids.length, incomplete_results: incomplete, items: ids.map((node_id) => ({ node_id })) });
 }
 
 /**
  * A mocked GitHub. `failing` kinds answer 502 every time. With `barrier`, no search is answered
  * until all three have arrived: if they were sent one after another, the poll would hang.
  */
-function mockGitHub(opts: { failing?: Kind[]; barrier?: boolean } = {}) {
+function mockGitHub(opts: { failing?: Kind[]; barrier?: boolean; incomplete?: Kind[] } = {}) {
   const log: Kind[] = [];
   let release: () => void = () => {};
   const allThree = new Promise<void>((r) => (release = r));
   let searches = 0;
   const deps: GitHubDeps = {
-    post: async (_t, query, vars) => {
-      const kind = kindOf(query, vars);
+    fetch: async (_t, req) => {
+      const kind = kindOf(req);
       log.push(kind);
       if (kind !== "details" && opts.barrier) {
         if (++searches === 3) release();
@@ -39,10 +43,10 @@ function mockGitHub(opts: { failing?: Kind[]; barrier?: boolean } = {}) {
       }
       if (opts.failing?.includes(kind)) return json(502, { message: "Bad Gateway" });
       if (kind === "details") {
-        const ids = vars.ids as string[];
-        return json(200, { data: { nodes: ids.map((id) => allPrs.find((p) => p.id === id) ?? null) } });
+        const ids = (req.body as { variables: { ids: string[] } }).variables.ids;
+        return json(200, { data: { viewer: { login: "LLjo" }, nodes: ids.map((id) => allPrs.find((p) => p.id === id) ?? null) } });
       }
-      return searchAnswer(kind);
+      return searchAnswer(kind, opts.incomplete?.includes(kind));
     },
     token: () => "gho_x",
     invalidate: () => {},
@@ -70,10 +74,10 @@ describe("collect", () => {
   test("(2) each request is retried once: a single 502 does not fail the list", async () => {
     let first = true;
     const gh = mockGitHub();
-    const post = gh.deps.post;
-    gh.deps.post = async (t, query, vars) => {
-      if (first && kindOf(query, vars) === "mine") { first = false; return json(502, {}); }
-      return post(t, query, vars);
+    const real = gh.deps.fetch;
+    gh.deps.fetch = async (t, req) => {
+      if (first && kindOf(req) === "mine") { first = false; return json(502, {}); }
+      return real(t, req);
     };
     const c = await collect(q, gh.deps);
     expect(c.mine.ok).toBe(true);
@@ -93,14 +97,21 @@ describe("collect", () => {
     expect(c.mine.ok).toBe(true);
   });
 
+  test("an incomplete search marks its list partial; a short direct search marks review partial", async () => {
+    const c = await collect(q, mockGitHub({ incomplete: ["mine", "direct"] }).deps);
+    expect(c.mine.ok && c.mine.partial).toBe(true);
+    expect(c.reviewRequested.ok && c.reviewRequested.partial).toBe(true);
+    const clean = await collect(q, mockGitHub().deps);
+    expect(clean.mine.ok && clean.mine.partial).toBe(false);
+  });
+
   test("no ids: no details lookup", async () => {
     const gh = mockGitHub();
-    const post = gh.deps.post;
-    gh.deps.post = async (t, query, vars) =>
-      kindOf(query, vars) === "details" ? post(t, query, vars)
-      : json(200, { data: { viewer: { login: "LLjo" }, result: { issueCount: 0, nodes: [] } } });
+    const real = gh.deps.fetch;
+    gh.deps.fetch = async (t, req) =>
+      kindOf(req) === "details" ? real(t, req) : json(200, { total_count: 0, incomplete_results: false, items: [] });
     const c = await collect(q, gh.deps);
     expect(gh.log.includes("details")).toBe(false);
-    expect(c.mine).toEqual({ ok: true, rows: [], total: 0 });
+    expect(c.mine).toEqual({ ok: true, rows: [], total: 0, partial: false });
   });
 });

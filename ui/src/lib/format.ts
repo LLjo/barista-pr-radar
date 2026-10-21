@@ -121,3 +121,12 @@ export function emptyLine(
   if (column === "review") return s.filter === "all" ? "Nothing waiting on you." : "Nothing here.";
   return s.filter === "drafts" ? "No drafts." : "No open PRs.";
 }
+
+/** The line under a column header when GitHub's search came back short (server/snapshot.ts). */
+export function partialNote(p: { partial?: boolean; kept?: number }): string | undefined {
+  if (!p.partial) return undefined;
+  const kept = p.kept ?? 0;
+  return kept
+    ? `GitHub returned partial results; ${kept} PR${kept === 1 ? "" : "s"} kept from the last sync.`
+    : "GitHub returned partial results; some PRs may be missing.";
+}

@@ -40,6 +40,9 @@ export type AuthSource = "env" | "gh" | "none";
 export interface PartState {
   fetchedAt: string | null;
   error?: string;
+  /** GitHub's search returned only some matches this time; `kept` rows come from earlier polls. */
+  partial?: boolean;
+  kept?: number;
 }
 
 export interface Snapshot {

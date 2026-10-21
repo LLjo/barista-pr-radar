@@ -33,3 +33,9 @@ gets no commits (spec acceptance 10), so this worklog lives here.
   (REST shows incomplete_results=true: 35 total, 27 items; or total 23). Not caused by parallel
   requests (same rate sequential). Mine count varied 18–35 across the 10 refreshes.
   Hammering it also trips GitHub's secondary rate limit (403).
+- Round 3c (never silently drop PRs): GraphQL search has no incompleteResults field, so the
+  three id searches moved to REST /search/issues (incomplete_results, or items < min(total,50)).
+  A partial list is unioned with the last good rows (snapshot.ts unionPartial; "you" kept) and
+  the column says "GitHub returned partial results; N kept from the last sync." Rate-limit
+  403/429 → one short line. Live: 2 refreshes ok at 2.9–3.2 s total, then GitHub's secondary
+  rate limit (account-wide, after this session's debugging) → last good kept, per-list error.

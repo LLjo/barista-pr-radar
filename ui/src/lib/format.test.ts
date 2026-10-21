@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { age, ciLabel, emptyLine, errorLine, filterMine, filterReview, groupByRepo, parseFilters, splitRepo, statusChips, syncedAgo } from "./format.js";
+import { age, ciLabel, emptyLine, errorLine, partialNote, filterMine, filterReview, groupByRepo, parseFilters, splitRepo, statusChips, syncedAgo } from "./format.js";
 import type { PrRow } from "./types.js";
 
 const NOW = Date.parse("2026-10-21T12:00:00Z");
@@ -91,4 +91,11 @@ describe("emptyLine", () => {
     expect(emptyLine("review", { ...base, filter: "me" })).toBe("Nothing here.");
     expect(emptyLine("mine", { ...base, filter: "drafts" })).toBe("No drafts.");
   });
+});
+
+test("partialNote", () => {
+  expect(partialNote({})).toBeUndefined();
+  expect(partialNote({ partial: true, kept: 2 })).toBe("GitHub returned partial results; 2 PRs kept from the last sync.");
+  expect(partialNote({ partial: true, kept: 1 })).toBe("GitHub returned partial results; 1 PR kept from the last sync.");
+  expect(partialNote({ partial: true, kept: 0 })).toBe("GitHub returned partial results; some PRs may be missing.");
 });

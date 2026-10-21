@@ -14,7 +14,32 @@ export const EMPTY_SNAPSHOT: Snapshot = {
 /** The first poll after boot failing waits this long, not a whole interval, before trying again. */
 export const BOOT_RETRY_MS = 30_000;
 
-function mergePart(prev: { rows: PrRow[]; total: number; state: PartState }, part: Part, now: string) {
+const byOldest = (a: PrRow, b: PrRow) => a.createdAt.localeCompare(b.createdAt);
+const byNewestUpdate = (a: PrRow, b: PrRow) => b.updatedAt.localeCompare(a.updatedAt);
+
+/**
+ * GitHub's search said it returned only some matches: never drop a PR because of that. Keep the
+ * previous rows this poll is missing (a PR closed meanwhile lingers until a complete search), and
+ * a "you" request stays "you" when only the direct search came back short.
+ */
+function unionPartial(prev: PrRow[], fresh: PrRow[], order: (a: PrRow, b: PrRow) => number): { rows: PrRow[]; kept: number } {
+  const prevById = new Map(prev.map((r) => [r.id, r]));
+  const freshIds = new Set(fresh.map((r) => r.id));
+  const merged = fresh.map((r) => (prevById.get(r.id)?.via?.kind === "you" && r.via?.kind === "team" ? { ...r, via: { kind: "you" as const } } : r));
+  const kept = prev.filter((r) => !freshIds.has(r.id));
+  return { rows: [...merged, ...kept].sort(order), kept: kept.length };
+}
+
+function mergePart(
+  prev: { rows: PrRow[]; total: number; state: PartState },
+  part: Part,
+  now: string,
+  order: (a: PrRow, b: PrRow) => number,
+) {
+  if (part.ok && part.partial) {
+    const { rows, kept } = unionPartial(prev.rows, part.rows, order);
+    return { rows, total: Math.max(part.total, rows.length), state: { fetchedAt: now, partial: true, kept } };
+  }
   if (part.ok) return { rows: part.rows, total: part.total, state: { fetchedAt: now } };
   // A failed list keeps its last good rows; only its own error changes.
   return { rows: prev.rows, total: prev.total, state: { fetchedAt: prev.state.fetchedAt, error: part.error } };
@@ -26,8 +51,8 @@ export function mergeSnapshot(
   c: Collected,
   meta: { auth: AuthSource; warning?: string; now: string },
 ): Snapshot {
-  const r = mergePart({ rows: prev.reviewRequested, total: prev.totals.reviewRequested, state: prev.parts.reviewRequested }, c.reviewRequested, meta.now);
-  const m = mergePart({ rows: prev.mine, total: prev.totals.mine, state: prev.parts.mine }, c.mine, meta.now);
+  const r = mergePart({ rows: prev.reviewRequested, total: prev.totals.reviewRequested, state: prev.parts.reviewRequested }, c.reviewRequested, meta.now, byOldest);
+  const m = mergePart({ rows: prev.mine, total: prev.totals.mine, state: prev.parts.mine }, c.mine, meta.now, byNewestUpdate);
   const isAuth = (p: Part) => !p.ok && p.error === "auth";
   const snap: Snapshot = {
     viewer: c.viewer ?? prev.viewer,

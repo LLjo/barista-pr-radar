@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { AuthError, graphql, RETRY_BACKOFF_MS, type GitHubDeps } from "./github.js";
+import { AuthError, graphql, RETRY_BACKOFF_MS, searchIssues, type GitHubDeps } from "./github.js";
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
 
@@ -8,7 +8,7 @@ function fake(...answers: (Response | Error)[]) {
   let calls = 0;
   const slept: number[] = [];
   const deps: GitHubDeps = {
-    post: async () => {
+    fetch: async () => {
       calls++;
       const r = answers.shift();
       if (!r) throw new Error("unexpected extra request");
@@ -90,4 +90,34 @@ describe("graphql retry", () => {
 test("an error without a status text still reads as a sentence", async () => {
   const f = fake(json(502, {}), json(502, {}));
   await expect(graphql("q", {}, f.deps)).rejects.toThrow(/^GitHub 502: error$/);
+});
+
+describe("searchIssues", () => {
+  const rest = (total: number, n: number, incomplete: boolean) =>
+    json(200, { total_count: total, incomplete_results: incomplete, items: Array.from({ length: n }, (_, i) => ({ node_id: `PR_${i}` })) });
+
+  test("a complete answer", async () => {
+    expect(await searchIssues("q", fake(rest(3, 3, false)).deps)).toEqual({ ids: ["PR_0", "PR_1", "PR_2"], total: 3, incomplete: false });
+  });
+
+  test("GitHub's incomplete_results flag is passed on", async () => {
+    expect((await searchIssues("q", fake(rest(23, 23, true)).deps)).incomplete).toBe(true);
+  });
+
+  test("fewer items than total_count (under the 50 page) counts as incomplete too", async () => {
+    expect((await searchIssues("q", fake(rest(35, 27, false)).deps)).incomplete).toBe(true);
+    expect((await searchIssues("q", fake(rest(80, 50, false)).deps)).incomplete).toBe(false); // just the page size
+  });
+
+  test("a 502 on the search is retried once", async () => {
+    const f = fake(json(502, {}), rest(1, 1, false));
+    expect((await searchIssues("q", f.deps)).ids).toEqual(["PR_0"]);
+    expect(f.calls()).toBe(2);
+  });
+});
+
+test("a rate-limit 403 becomes one short line and is not retried", async () => {
+  const f = fake(json(403, { message: "You have exceeded a secondary rate limit. Please wait a few minutes before you try again. For more on scraping…" }));
+  await expect(graphql("q", {}, f.deps)).rejects.toThrow("GitHub rate limit hit (403): showing the last good list until it lifts");
+  expect(f.calls()).toBe(1);
 });
