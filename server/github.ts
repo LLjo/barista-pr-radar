@@ -1,4 +1,5 @@
-import { invalidateGitHubToken, resolveGitHubToken } from "@barista/types/github-auth";
+import { invalidateGitHubToken } from "@barista/types/github-auth";
+import { resolveToken } from "./auth.js";
 
 const ENDPOINT = "https://api.github.com/graphql";
 
@@ -25,12 +26,12 @@ async function post(token: string, query: string, variables: Record<string, unkn
 
 /** POST one GraphQL query. A 401 drops the cached token and retries once with a fresh one. */
 export async function graphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
-  let token = resolveGitHubToken();
+  let { token } = resolveToken();
   if (!token) throw new AuthError();
   let res = await post(token, query, variables);
   if (res.status === 401) {
     invalidateGitHubToken();
-    token = resolveGitHubToken();
+    token = resolveToken().token;
     if (!token) throw new AuthError();
     res = await post(token, query, variables);
     if (res.status === 401) throw new AuthError("GitHub rejected the host's token (401)");

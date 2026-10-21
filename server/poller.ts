@@ -1,5 +1,5 @@
 import { nats } from "@barista/plugin-sdk";
-import { githubAuthSource } from "@barista/types/github-auth";
+import { resolveToken } from "./auth.js";
 import { AuthError, graphql } from "./github.js";
 import { mapResponse, type GqlData } from "./map.js";
 import { buildSearchQueries, GRAPHQL } from "./query.js";
@@ -25,8 +25,11 @@ export function getSnapshot(): Snapshot {
 async function fetchOnce(): Promise<Snapshot> {
   const settings = getSettings();
   const q = buildSearchQueries(settings);
-  const base = { auth: githubAuthSource(), warning: q.warning };
+  // Re-resolved on every poll and ↻: a signed-out host is re-asked each time (auth.ts).
+  const { token, source } = resolveToken();
+  const base = { auth: source, warning: q.warning };
   try {
+    if (!token) throw new AuthError();
     const data = await graphql<GqlData>(GRAPHQL, { rq: q.review, direct: q.direct, mine: q.mine });
     return { ...mapResponse(data), ...base, fetchedAt: new Date().toISOString() };
   } catch (err) {
