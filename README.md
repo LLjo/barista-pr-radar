@@ -21,7 +21,7 @@ The toolbar holds every setting, saved as you change it:
 - **Repos**: comma list of `name` (expanded for every org) or `owner/name`.
 - **Every**: how often the server polls GitHub (1, 5 or 15 min). ↻ polls now.
 
-One GraphQL call per poll (4 rate-limit points). `GET /api/pr-radar/count` returns the
+Each poll runs three searches in parallel (ids only), then one detail lookup per list: GitHub cuts any GraphQL request at about 10 s, and one combined query took 8–11 s. A 502/503/504 or a response without data is retried once. `GET /api/pr-radar/count` returns the
 review-request count.
 
 ## Develop

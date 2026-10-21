@@ -63,15 +63,7 @@ export function buildSearchQueries(s: Pick<Settings, "orgs" | "repos">): SearchQ
   return out;
 }
 
-/** One call per poll; verified against api.github.com on 2026-10-21 (cost 4). */
-export const GRAPHQL = `query($rq:String!,$direct:String!,$mine:String!){
-  viewer{login}
-  rateLimit{cost remaining resetAt}
-  review: search(type:ISSUE, query:$rq, first:50){ issueCount nodes{...Pr} }
-  direct: search(type:ISSUE, query:$direct, first:50){ nodes{... on PullRequest{id}} }
-  mine: search(type:ISSUE, query:$mine, first:50){ issueCount nodes{...Pr} }
-}
-fragment Pr on PullRequest {
+const PR_FRAGMENT = `fragment Pr on PullRequest {
   id number title url isDraft createdAt updatedAt
   author{login}
   repository{nameWithOwner}
@@ -80,3 +72,19 @@ fragment Pr on PullRequest {
   latestOpinionatedReviews(first:10){ nodes{ state author{login} } }
   commits(last:1){ nodes{ commit{ statusCheckRollup{ state contexts(first:0){ totalCount checkRunCountsByState{state count} statusContextCountsByState{state count} } } } } }
 }`;
+
+/**
+ * A poll is several small requests, not one: the combined query took 8–11 s and GitHub cut it
+ * at its ~10 s limit (a 502, or a 200 with no data). The search alone is 4–5 s even for ids, and
+ * the PR fields add 2–3 s, so each list is a search for ids, then one `nodes(ids:)` for details.
+ * The three searches run in parallel.
+ */
+export const SEARCH_QUERY = `query($q:String!){
+  viewer{login}
+  result: search(type:ISSUE, query:$q, first:50){ issueCount nodes{... on PullRequest{id}} }
+}`;
+
+export const DETAILS_QUERY = `query($ids:[ID!]!){
+  nodes(ids:$ids){ ...Pr }
+}
+${PR_FRAGMENT}`;

@@ -2,10 +2,24 @@ import { nats } from "@barista/plugin-sdk";
 import { resolveToken } from "./auth.js";
 import { AuthError, graphql } from "./github.js";
 import { mapResponse, type GqlData } from "./map.js";
-import { buildSearchQueries, GRAPHQL } from "./query.js";
+import { buildSearchQueries, DETAILS_QUERY, SEARCH_QUERY } from "./query.js";
 import { getSettings } from "./settings.js";
 import { subjects } from "./subjects.js";
 import type { Snapshot } from "./types.js";
+
+interface SearchResult {
+  viewer: GqlData["viewer"];
+  result: { issueCount: number; nodes: ({ id?: string } | null)[] };
+}
+
+const idsOf = (r: SearchResult) => r.result.nodes.map((n) => n?.id).filter((id): id is string => !!id);
+
+/** A search's PRs in full: its ids, then one `nodes(ids:)` lookup (skipped when there are none). */
+async function details(r: SearchResult): Promise<unknown[]> {
+  const ids = idsOf(r);
+  if (!ids.length) return [];
+  return (await graphql<{ nodes: unknown[] }>(DETAILS_QUERY, { ids })).nodes;
+}
 
 let snapshot: Snapshot = {
   viewer: null,
@@ -30,7 +44,16 @@ async function fetchOnce(): Promise<Snapshot> {
   const base = { auth: source, warning: q.warning };
   try {
     if (!token) throw new AuthError();
-    const data = await graphql<GqlData>(GRAPHQL, { rq: q.review, direct: q.direct, mine: q.mine });
+    const [review, direct, mine] = await Promise.all(
+      [q.review, q.direct, q.mine].map((query) => graphql<SearchResult>(SEARCH_QUERY, { q: query })),
+    );
+    const [reviewNodes, mineNodes] = await Promise.all([details(review), details(mine)]);
+    const data: GqlData = {
+      viewer: mine.viewer,
+      review: { issueCount: review.result.issueCount, nodes: reviewNodes },
+      direct: direct.result,
+      mine: { issueCount: mine.result.issueCount, nodes: mineNodes },
+    };
     return { ...mapResponse(data), ...base, fetchedAt: new Date().toISOString() };
   } catch (err) {
     // A failed poll keeps the last good lists; only the error changes.
